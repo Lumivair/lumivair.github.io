@@ -1,17 +1,22 @@
 [
     {
         "title": "Home",
-        "url": "/",
-        "description": "Welcome to my website!"
+        "url": "index.html",
+        "description": "Welcome to the Lumivair website!"
     },
     {
         "title": "About",
-        "url": "/about.html",
-        "description": "Learn more about me."
+        "url": "index.html#about",
+        "description": "Learn more about Lumivair and the origins of the name"
     },
     {
         "title": "Contact",
-        "url": "/contact.html",
-        "description": "Get in touch!"
+        "url": "index.html#contact",
+        "description": "Get in touch"
+    }
+	{
+        "title": "Links",
+        "url": "index.html#links",
+        "description": "My favourite links"
     }
 ]
