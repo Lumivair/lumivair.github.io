@@ -1,0 +1,17 @@
+[
+    {
+        "title": "Home",
+        "url": "/",
+        "description": "Welcome to my website!"
+    },
+    {
+        "title": "About",
+        "url": "/about.html",
+        "description": "Learn more about me."
+    },
+    {
+        "title": "Contact",
+        "url": "/contact.html",
+        "description": "Get in touch!"
+    }
+]
