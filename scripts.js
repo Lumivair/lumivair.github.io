@@ -44,3 +44,16 @@ document.addEventListener('DOMContentLoaded', () => {
         event.stopPropagation(); // Prevent click from propagating to the document click listener
     });
 });
+    // Close menu when clicking outside on mobile (and stop propagation inside the menu)
+    document.addEventListener('click', (event) => {
+        if (!navMenu.contains(event.target) && !hamburger.contains(event.target) && navMenu.classList.contains('show')) {
+            hamburger.classList.remove('open');
+            navMenu.classList.remove('show');
+        }
+    });
+
+    // Prevent closing the menu when clicking inside the menu or hamburger button
+    navMenu.addEventListener('click', (event) => {
+        event.stopPropagation(); // Prevent click from propagating to the document click listener
+    });
+});
