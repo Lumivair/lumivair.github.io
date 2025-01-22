@@ -19,7 +19,6 @@
     
 <h2>To-Dos:</h2>
 <ul>
-<li>Make horizontal Nav in Desktop</li>
 <li>Make search mobile work compact</li>
 <li>Add new content!</li>
 <li>...</li>
