@@ -63,3 +63,4 @@ searchBar.addEventListener('input', () => {
     const query = searchBar.value;
     performSearch(query);
 });
+

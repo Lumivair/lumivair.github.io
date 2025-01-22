@@ -64,6 +64,10 @@ form input[type="text"] {
     transition: all 0.3s ease;
 }
 
+#searchActivator {
+        display: none;
+    }
+	
 /* Search Bar */
 #search-bar {
 	
@@ -113,22 +117,17 @@ form input[type="text"] {
 /* Mobile-Responsive Adjustments */
 @media screen and (max-width: 550px) {
 	
+	#searchActivator {
+        display: block;
+    }
+	
     #search-bar {
         display: none;
     }
 	
 	#search-button {
-    display: flex; /* Hide the search bar by default */
-    padding: 0.5rem;
-    font-size: 1rem;
-    border-radius: 5px;
-    width: 100%;
-    max-width: 800px;
-    min-width: 1px;
-    transition: width 0.3s ease, border-color 0.3s;
-	position: relative;
-	align-items: right;
-	justify-content: right;
+	display: none;
+
 }
 
 }

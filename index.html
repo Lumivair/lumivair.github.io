@@ -21,10 +21,13 @@
         <div class="search-container">
 		<form action="search.html" method="GET">
             <input id="search-bar" name="query" type="text" placeholder="Search..." aria-label="Search">
-            <button id="search-button" type="submit" aria-label="Search">
+            <button id="search-button" type="submit" aria-label="Search"> 
+			<i class="fas fa-search"></i> <!-- Font Awesome search icon -->
+			</button>
+			</form>
+			<button id="searchActivator">
                 <i class="fas fa-search"></i> <!-- Font Awesome search icon -->
             </button>
-		</form>
         </div>
         
         <!-- Navigation Menu -->
@@ -72,5 +75,6 @@
     </footer>
 
     <script src="scripts.js"></script>
+	<script src="searchactivator.js"></script>
 </body>
 </html>

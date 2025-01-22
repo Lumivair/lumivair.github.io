@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Button Example</title>
+    <style>
+        /* Button Styling */
+        #searchButton {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #searchButton:hover {
+            background-color: #0056b3;
+        }
+
+        /* Search Window Styling */
+        #searchWindow {
+            display: none; /* Initially hidden */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        #searchWindow input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #searchWindow button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #searchWindow button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <button id="searchButton">Open Search</button>
+
+    <div id="searchWindow">
+        <h3>Search</h3>
+        <input type="text" id="searchInput" placeholder="Type your query here..." />
+        <button onclick="performSearch()">Search</button>
+    </div>
+
+    <script>
+        // JavaScript to handle opening and closing the search window
+        const searchButton = document.getElementById('searchButton');
+        const searchWindow = document.getElementById('searchWindow');
+
+        searchButton.addEventListener('click', () => {
+            searchWindow.style.display = 'block'; // Show the search window
+        });
+
+        function performSearch() {
+            const query = document.getElementById('searchInput').value;
+            alert(`Searching for: ${query}`); // Placeholder for the search logic
+            searchWindow.style.display = 'none'; // Hide the search window after search
+        }
+    </script>
+</body>
+</html>
