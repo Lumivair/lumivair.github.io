@@ -217,19 +217,26 @@ nav ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    display: flex
-	flex-direction: column;
-    gap: 1.5rem; /* Adjusted spacing for menu items */
+    display: flex;
+	flex-direction: row;
+    gap: 4rem; /* Adjusted spacing for menu items */
 }
 
 nav ul li a {
     color: #fff;
     text-decoration: none;
-    font-size: 2rem; /* Increased font size */
+    font-size: 4rem; /* Increased font size */
 }
 
 nav ul li a:hover {
     text-decoration: underline;
+}
+
+@media screen and (max-width: 760px) {
+	
+	nav ul {
+	flex-direction: column;
+	}
 }
 
 /* Menu Styles */
@@ -259,6 +266,20 @@ main {
     margin-top: 80px; /* Ensure space for fixed header */
 }
 
+.result {
+    margin-bottom: 1rem;
+    padding: 1.5rem;
+    background: #fff; /* White background for content */
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.result a {
+    color: black; /* Link color */
+    text-decoration: undeline; /* Remove underline */
+    font-size: 18px; /* Adjust title size */
+}
+
 /* Section Styles */
 section {
     margin-bottom: 2rem;
@@ -268,6 +289,14 @@ section {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+#results {
+	padding: 0rem;
+    background-color: #f4f4f4;
+    border: none;
+    border-radius: 0px;
+    box-shadow: none;
+}
+	
 h1 {
     font-size: 1.8rem;
     margin-bottom: 1rem;
