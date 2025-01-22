@@ -20,7 +20,6 @@
 <h2>To-Dos:</h2>
 <ul>
 <li>Make horizontal Nav in Desktop</li>
-<li>Fix wonky X in Nav</li>
 <li>Make search mobile work compact</li>
 <li>Add new content!</li>
 <li>...</li>
@@ -30,6 +29,8 @@
 <ul>
 <li>Add logo to tab icon</li>
 <li>Fix clicking Logo to reload + click title to reload</li>
+<li>Make horizontal Nav in Desktop</li>
+<li>Fix wonky X in Nav</li>
 <li>...</li>
 </ul>
     
