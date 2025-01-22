@@ -149,6 +149,7 @@ form input[type="text"] {
 .logo-link {
     display: block; /* Ensures the link surrounds the logo image */
     cursor: pointer; /* Changes the cursor to indicate the logo is clickable */
+	z-index: 1000;
 }
 
 .logo {
@@ -162,6 +163,9 @@ form input[type="text"] {
     font-size: 1.7rem;
     font-weight: bold;
     padding-left: 0.5rem;
+	color: white;
+	text-decoration: none;
+	z-index: 1000;
 }
 
 /* Navigation Container */
