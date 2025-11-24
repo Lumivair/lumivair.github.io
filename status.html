@@ -4,72 +4,130 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Minecraft service status</title>
+
+  <!-- your styles -->
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#f5f5f7}
-    .card{padding:28px 36px;border-radius:12px;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,0.08);text-align:center}
+    body{
+      font-family:system-ui,Segoe UI,Roboto,Arial;
+      margin:0;
+      background:#f5f5f7;
+
+      /* Remove full height flex so header/footer fit normally */
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+    }
+
+    /* Center card without using full-height body */
+    .page-content{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+
+    .card{
+      padding:28px 36px;
+      border-radius:12px;
+      background:#fff;
+      box-shadow:0 6px 24px rgba(0,0,0,0.08);
+      text-align:center
+    }
+
     .status{font-size:28px;margin-top:8px}
     .online{color:green}
     .offline{color:#d00}
     .muted{color:#666;font-size:14px}
   </style>
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-  <div class="card">
-    <h1>Minecraft server</h1>
-    <div id="status" class="status muted">Checking…</div>
-    <div id="detail" class="muted" style="margin-top:8px">—</div>
+
+  <!-- HEADER -->
+  <div data-include="header.html"></div>
+
+  <!-- Main centered content -->
+  <div class="page-content">
+    <div class="card">
+      <h1>Minecraft server</h1>
+      <div id="status" class="status muted">Checking…</div>
+      <div id="detail" class="muted" style="margin-top:8px">—</div>
+    </div>
   </div>
 
-<script>
-const endpoint = "https://status.lumivair.space/status"; // cloudflared tunnel hostname
-const statusEl = document.getElementById('status');
-const detailEl = document.getElementById('detail');
+  <!-- FOOTER -->
+  <div data-include="footer.html"></div>
 
-async function fetchWithTimeout(resource, options = {}){
-  const { timeout = 3000 } = options;
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try{
-    const response = await fetch(resource, { ...options, signal: controller.signal });
-    clearTimeout(id);
-    return response;
-  }catch(err){
-    clearTimeout(id);
-    throw err;
+
+  <!-- STATUS CHECK SCRIPT -->
+  <script>
+  const endpoint = "https://status.lumivair.space/status";
+  const statusEl = document.getElementById('status');
+  const detailEl = document.getElementById('detail');
+
+  async function fetchWithTimeout(resource, options = {}){
+    const { timeout = 3000 } = options;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try{
+      const response = await fetch(resource, { ...options, signal: controller.signal });
+      clearTimeout(id);
+      return response;
+    }catch(err){
+      clearTimeout(id);
+      throw err;
+    }
   }
-}
 
-async function check(){
-  try{
-    const res = await fetchWithTimeout(endpoint, { timeout: 3000 });
-    if(!res.ok){
-      // treat non-2xx as disconnected
+  async function check(){
+    try{
+      const res = await fetchWithTimeout(endpoint, { timeout: 3000 });
+      if(!res.ok){
+        statusEl.textContent = 'Disconnected';
+        statusEl.className = 'status offline';
+        detailEl.textContent = 'Backend returned HTTP ' + res.status + ' — treating as disconnected';
+        return;
+      }
+      const data = await res.json();
+      if(data && data.active === true){
+        statusEl.textContent = 'Server online';
+        statusEl.className = 'status online';
+        detailEl.textContent = 'Checked at ' + new Date(data.timestamp * 1000).toLocaleString();
+      } else {
+        statusEl.textContent = 'Disconnected';
+        statusEl.className = 'status offline';
+        detailEl.textContent = 'Service not active according to backend';
+      }
+    }catch(err){
       statusEl.textContent = 'Disconnected';
       statusEl.className = 'status offline';
-      detailEl.textContent = 'Backend returned HTTP ' + res.status + ' — treating as disconnected';
-      return;
+      detailEl.textContent = 'Could not reach backend';
     }
-    const data = await res.json();
-    // backend returns { service: 'minecraft', active: true/false }
-    if(data && data.active === true){
-      statusEl.textContent = 'Server online';
-      statusEl.className = 'status online';
-      detailEl.textContent = 'Checked at ' + new Date(data.timestamp * 1000).toLocaleString();
-    } else {
-      statusEl.textContent = 'Disconnected';
-      statusEl.className = 'status offline';
-      detailEl.textContent = 'Service not active according to backend';
-    }
-  }catch(err){
-    statusEl.textContent = 'Disconnected';
-    statusEl.className = 'status offline';
-    detailEl.textContent = 'Could not reach backend';
   }
-}
 
-// poll every 5 seconds
-check();
-setInterval(check, 5000);
-</script>
+  check();
+  setInterval(check, 5000);
+  </script>
+
+  <!-- INCLUDE SCRIPT (same as index.html) -->
+  <script>
+  (function(){
+      async function include(el) {
+          const file = el.getAttribute("data-include");
+          if (!file) return;
+          try {
+              const res = await fetch(file);
+              el.innerHTML = await res.text();
+          } catch (e) {
+              el.innerHTML = "<!-- include failed -->";
+          }
+      }
+      document.querySelectorAll("[data-include]").forEach(include);
+  })();
+  </script>
+
 </body>
 </html>
