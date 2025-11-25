@@ -17,10 +17,10 @@
     "canImportXml": false,
     "canOpen": false,
     "canOpenDemo": false,
-    "canOpenGenerator": true,
+    "canOpenGenerator": false,
     "canOpenOtpDevice": true,
     "canOpenSettings": true,
-    "canOpenStorage": true,
+    "canOpenStorage": false,
     "canRemoveLatest": true,
     "canSaveTo": true,
     "checkPasswordsOnHIBP": true,
@@ -93,7 +93,7 @@
   "files": [
     {
       "storage": "webdav",
-      "name": "FssKeypass2.0",
+      "name": "FssK2",
       "path": "https://keepass.lumivair.space/FssKeypass2.0.kdbx",
       "options": {
         "user": "",
