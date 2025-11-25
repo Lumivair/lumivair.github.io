@@ -1,0 +1,23 @@
+{
+  "settings": {
+    "autoSave": true,
+    "dontRemindForUpdates": true,
+    "canOpenDemo": false,
+    "canOpen": false,
+    "canCreate": false,
+    "canImportXml": false,
+    "lockOnCopy": false,
+    "theme": "wh"
+  },
+  "files": [
+    {
+      "storage": "webdav",
+      "name": "FssKeypass2.0",
+      "path": "https://keepass.lumivair.space/FssKeypass2.0.kdbx",
+      "options": {
+        "user": "",
+        "password": ""
+      }
+    }
+  ]
+}
