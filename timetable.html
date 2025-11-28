@@ -8,6 +8,8 @@
         body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
         .navigation { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .navigation button { padding: 10px 15px; cursor: pointer; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; }
+        /* Added focus style for better accessibility */
+        .navigation button:focus { outline: 2px solid #007bff; }
         .lesson-entry { margin-bottom: 15px; padding: 10px; border-left: 5px solid #007bff; background: #e9f7ff; border-radius: 4px; }
         .lesson-title { font-weight: bold; margin-bottom: 5px; }
         .lesson-details { font-size: 0.9em; color: #555; }
@@ -20,9 +22,9 @@
     </header>
 
     <div class="navigation">
-        <button onclick="changeWeek(-1)">← Previous Week</button>
+        <button onclick="window.changeWeek(-1)">← Previous Week</button>
         <h2 id="current-week-display"></h2>
-        <button onclick="changeWeek(1)">Next Week →</button>
+        <button onclick="window.changeWeek(1)">Next Week →</button>
     </div>
 
     <div id="timetable-output">
@@ -37,46 +39,46 @@
         // Use Monday as the start of the week for European standard
         let currentWeekStart = moment().startOf('isoWeek'); 
 
-       // --- Data Fetching ---
-async function fetchTimetableData() {
-    try {
-        const response = await fetch(API_URL);
-        
-        if (response.status === 304) {
-            console.log("Timetable data unchanged (304 Not Modified). Rendering from cache.");
-            // If data was previously loaded, render it again.
-            if (allTimetableData.length > 0) {
-                 renderTimetable();
-                 return;
-            }
-            // If it's the first load and we get 304, we can't do much. 
-            // This is unlikely but handles the edge case.
-            throw new Error("Received 304, but no data was previously loaded. Try clearing cache.");
-        }
-        
-        if (!response.ok) {
-            // This handles actual HTTP errors (4xx, 5xx)
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        
-        // This line only runs if the status is 200 (OK)
-        allTimetableData = await response.json();
-        
-        if (allTimetableData.length === 0) {
-             document.getElementById('timetable-output').innerHTML = 
-                '<p>Timetable data loaded but is empty. Check the backend script date range.</p>';
-             return;
-        }
+        // --- Data Fetching ---
+        // Make fetchTimetableData a global function by attaching it to window, 
+        // though in this simple script it's generally fine as is.
+        async function fetchTimetableData() {
+            try {
+                const outputDiv = document.getElementById('timetable-output');
+                outputDiv.innerHTML = '<p>Fetching data...</p>'; // Show status
 
-        console.log("Timetable data successfully fetched (200 OK) and parsed.");
-        renderTimetable();
-        
-    } catch (error) {
-        console.error("Could not fetch or parse timetable data:", error);
-        document.getElementById('timetable-output').innerHTML = 
-            `<p style="color: red;">Error loading data: ${error.message}. Check browser console for details.</p>`;
-    }
-}
+                const response = await fetch(API_URL);
+                
+                if (response.status === 304) {
+                    console.log("Timetable data unchanged (304 Not Modified). Rendering from cache.");
+                    if (allTimetableData.length > 0) {
+                        renderTimetable();
+                        return;
+                    }
+                    throw new Error("Received 304, but no data was previously loaded. Try clearing cache.");
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                
+                allTimetableData = await response.json();
+                
+                if (allTimetableData.length === 0) {
+                    outputDiv.innerHTML = 
+                        '<p>Timetable data loaded but is empty. Check the backend script date range.</p>';
+                    return;
+                }
+
+                console.log("Timetable data successfully fetched (200 OK) and parsed.");
+                renderTimetable();
+                
+            } catch (error) {
+                console.error("Could not fetch or parse timetable data:", error);
+                document.getElementById('timetable-output').innerHTML = 
+                    `<p style="color: red;">Error loading data: ${error.message}. Check browser console for details. (Note: The API URL may be inaccessible outside its intended network.)</p>`;
+            }
+        }
 
         // --- Rendering Logic ---
         function renderTimetable() {
@@ -93,9 +95,10 @@ async function fetchTimetableData() {
 
             // Filter lessons for the selected week
             const weeklyLessons = allTimetableData.filter(lesson => {
-                const lessonDate = moment(lesson.lessonDate, 'YYYY-MM-DD');
+                // Ensure lessonDate is handled as a start of day moment object for reliable comparison
+                const lessonDate = moment(lesson.lessonDate, 'YYYY-MM-DD').startOf('day'); 
                 // Use isBetween with '[]' for inclusive start and end dates
-                return lessonDate.isBetween(weekStart, weekEnd, null, '[]'); 
+                return lessonDate.isBetween(weekStart.startOf('day'), weekEnd.startOf('day'), null, '[]'); 
             });
 
             if (weeklyLessons.length === 0) {
@@ -114,7 +117,8 @@ async function fetchTimetableData() {
             // Render the daily view, sorted by day order
             Object.keys(lessonsByDay).sort((a, b) => moment(a, 'dddd, YYYY-MM-DD').valueOf() - moment(b, 'dddd, YYYY-MM-DD').valueOf()).forEach(day => {
                 const dayHeader = document.createElement('h3');
-                dayHeader.textContent = day;
+                // Use a cleaner format for the display
+                dayHeader.textContent = moment(day, 'dddd, YYYY-MM-DD').format('dddd, MMMM Do'); 
                 outputDiv.appendChild(dayHeader);
 
                 // Sort lessons within the day by start time (using sort_key for reliability)
@@ -124,14 +128,15 @@ async function fetchTimetableData() {
                     
                     const time = `${lesson.lessonStart.substring(0, 5)} - ${lesson.lessonEnd.substring(0, 5)}`;
                     const title = lesson.title || lesson.subjectName || 'Lesson';
-                    const room = lesson.roomName ? ` Room: ${lesson.roomName}` : '';
+                    // Better room handling
+                    const room = lesson.roomName ? ` | Room: ${lesson.roomName}` : ''; 
                     const teacher = lesson.teacherAcronym || (Array.isArray(lesson.teacherFullName) ? lesson.teacherFullName.join(', ') : lesson.teacherFullName) || 'N/A';
                     const course = lesson.course || 'N/A';
-                    const type = lesson.timetableEntryType === 'substitution' ? '(Substitution)' : '';
+                    const type = lesson.timetableEntryType === 'substitution' ? ' **(Substitution)**' : '';
 
                     lessonElement.innerHTML = `
-                        <p class="lesson-title">${time} &mdash; ${title} ${type}</p>
-                        <p class="lesson-details">Course: ${course} | Teacher: ${teacher} ${room}</p>
+                        <p class="lesson-title">${time} &mdash; ${title}${type}</p>
+                        <p class="lesson-details">Course: ${course} | Teacher: ${teacher}${room}</p>
                     `;
                     outputDiv.appendChild(lessonElement);
                 });
@@ -139,14 +144,16 @@ async function fetchTimetableData() {
         }
 
         // --- Navigation Logic ---
-        function changeWeek(direction) {
+        // Exposing changeWeek globally for the HTML onclick handlers
+        window.changeWeek = function(direction) {
             // Use isoWeek to ensure the week starts on Monday consistently
             currentWeekStart.add(direction, 'weeks').startOf('isoWeek');
             renderTimetable();
         }
         
         // Initial load
-        fetchTimetableData();
+        window.onload = fetchTimetableData; // Or simply call it outside a function, as was done originally
+        fetchTimetableData(); 
     </script>
 
 </body>
