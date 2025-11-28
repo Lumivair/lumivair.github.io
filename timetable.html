@@ -6,18 +6,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <style>
         body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
-        .navigation { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .timetable { border-collapse: collapse; width: 100%; }
-        .timetable th, .timetable td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        .timetable tr:nth-child(even){ background-color: #f2f2f2; }
-        .lesson-entry { margin-bottom: 15px; padding: 10px; border-left: 5px solid #007bff; background: #e9f7ff; }
-        .lesson-title { font-weight: bold; }
+        .navigation { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .navigation button { padding: 10px 15px; cursor: pointer; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; }
+        .lesson-entry { margin-bottom: 15px; padding: 10px; border-left: 5px solid #007bff; background: #e9f7ff; border-radius: 4px; }
+        .lesson-title { font-weight: bold; margin-bottom: 5px; }
+        .lesson-details { font-size: 0.9em; color: #555; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Timetable Viewer</h1>
+        <h1>🗓️ Timetable Viewer</h1>
     </header>
 
     <div class="navigation">
@@ -31,44 +30,56 @@
     </div>
 
     <script>
-        // *** IMPORTANT: REPLACE THIS URL ***
-        // This is the public URL exposed by your Cloudflare Tunnel pointing to your Flask API
+        // --- CONFIGURATION ---
         const API_URL = 'https://timetable.lumivair.space/timetable/latest'; 
         
         let allTimetableData = [];
-        let currentWeekStart = moment().startOf('week'); // Start on the current week
+        // Use Monday as the start of the week for European standard
+        let currentWeekStart = moment().startOf('isoWeek'); 
 
         // --- Data Fetching ---
         async function fetchTimetableData() {
             try {
                 const response = await fetch(API_URL);
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`HTTP error! Status: ${response.status}`);
                 }
+                
                 allTimetableData = await response.json();
+                
+                if (allTimetableData.length === 0) {
+                     document.getElementById('timetable-output').innerHTML = 
+                        '<p>Timetable data loaded but is empty. Check the backend script date range.</p>';
+                     return;
+                }
+
                 renderTimetable();
             } catch (error) {
                 console.error("Could not fetch timetable data:", error);
                 document.getElementById('timetable-output').innerHTML = 
-                    '<p style="color: red;">Error loading data. Check the Cloudflare Tunnel and API.</p>';
+                    `<p style="color: red;">Error loading data: ${error.message}. Check browser console for details.</p>`;
             }
         }
 
         // --- Rendering Logic ---
         function renderTimetable() {
             const outputDiv = document.getElementById('timetable-output');
-            outputDiv.innerHTML = ''; // Clear previous content
+            outputDiv.innerHTML = ''; 
 
-            const weekStart = currentWeekStart.clone().startOf('week');
-            const weekEnd = currentWeekStart.clone().endOf('week');
+            // Calculate the current week range (inclusive)
+            const weekStart = currentWeekStart.clone().startOf('isoWeek');
+            const weekEnd = currentWeekStart.clone().endOf('isoWeek');
 
             // Update the display title
             document.getElementById('current-week-display').textContent = 
-                `Week of ${weekStart.format('MMM D')} - ${weekEnd.format('MMM D, YYYY')}`;
+                `Week ${weekStart.isoWeek()} (${weekStart.format('MMM D')} - ${weekEnd.format('MMM D, YYYY')})`;
 
+            // Filter lessons for the selected week
             const weeklyLessons = allTimetableData.filter(lesson => {
                 const lessonDate = moment(lesson.lessonDate, 'YYYY-MM-DD');
-                return lessonDate.isBetween(weekStart, weekEnd, null, '[]'); // Inclusive range
+                // Use isBetween with '[]' for inclusive start and end dates
+                return lessonDate.isBetween(weekStart, weekEnd, null, '[]'); 
             });
 
             if (weeklyLessons.length === 0) {
@@ -76,7 +87,7 @@
                 return;
             }
 
-            // Group lessons by day for a clearer display
+            // Group lessons by day (key is "Monday, 2025-11-28")
             const lessonsByDay = weeklyLessons.reduce((acc, lesson) => {
                 const day = moment(lesson.lessonDate, 'YYYY-MM-DD').format('dddd, YYYY-MM-DD');
                 acc[day] = acc[day] || [];
@@ -84,33 +95,37 @@
                 return acc;
             }, {});
 
-            // Render the daily view
-            for (const day in lessonsByDay) {
+            // Render the daily view, sorted by day order
+            Object.keys(lessonsByDay).sort((a, b) => moment(a, 'dddd, YYYY-MM-DD').valueOf() - moment(b, 'dddd, YYYY-MM-DD').valueOf()).forEach(day => {
                 const dayHeader = document.createElement('h3');
                 dayHeader.textContent = day;
                 outputDiv.appendChild(dayHeader);
 
-                lessonsByDay[day].forEach(lesson => {
+                // Sort lessons within the day by start time (using sort_key for reliability)
+                lessonsByDay[day].sort((a, b) => a.sort_key.localeCompare(b.sort_key)).forEach(lesson => {
                     const lessonElement = document.createElement('div');
                     lessonElement.className = 'lesson-entry';
                     
                     const time = `${lesson.lessonStart.substring(0, 5)} - ${lesson.lessonEnd.substring(0, 5)}`;
                     const title = lesson.title || lesson.subjectName || 'Lesson';
-                    const room = lesson.roomName ? `(${lesson.roomName})` : '';
-                    const teacher = lesson.teacherAcronym || lesson.teacherFullName || 'N/A';
+                    const room = lesson.roomName ? ` Room: ${lesson.roomName}` : '';
+                    const teacher = lesson.teacherAcronym || (Array.isArray(lesson.teacherFullName) ? lesson.teacherFullName.join(', ') : lesson.teacherFullName) || 'N/A';
+                    const course = lesson.course || 'N/A';
+                    const type = lesson.timetableEntryType === 'substitution' ? '(Substitution)' : '';
 
                     lessonElement.innerHTML = `
-                        <p class="lesson-title">${time} &mdash; ${title} ${room}</p>
-                        <p>Course: ${lesson.course} | Teacher: ${teacher}</p>
+                        <p class="lesson-title">${time} &mdash; ${title} ${type}</p>
+                        <p class="lesson-details">Course: ${course} | Teacher: ${teacher} ${room}</p>
                     `;
                     outputDiv.appendChild(lessonElement);
                 });
-            }
+            });
         }
 
         // --- Navigation Logic ---
         function changeWeek(direction) {
-            currentWeekStart.add(direction, 'weeks');
+            // Use isoWeek to ensure the week starts on Monday consistently
+            currentWeekStart.add(direction, 'weeks').startOf('isoWeek');
             renderTimetable();
         }
         
