@@ -37,30 +37,46 @@
         // Use Monday as the start of the week for European standard
         let currentWeekStart = moment().startOf('isoWeek'); 
 
-        // --- Data Fetching ---
-        async function fetchTimetableData() {
-            try {
-                const response = await fetch(API_URL);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                
-                allTimetableData = await response.json();
-                
-                if (allTimetableData.length === 0) {
-                     document.getElementById('timetable-output').innerHTML = 
-                        '<p>Timetable data loaded but is empty. Check the backend script date range.</p>';
-                     return;
-                }
-
-                renderTimetable();
-            } catch (error) {
-                console.error("Could not fetch timetable data:", error);
-                document.getElementById('timetable-output').innerHTML = 
-                    `<p style="color: red;">Error loading data: ${error.message}. Check browser console for details.</p>`;
+       // --- Data Fetching ---
+async function fetchTimetableData() {
+    try {
+        const response = await fetch(API_URL);
+        
+        if (response.status === 304) {
+            console.log("Timetable data unchanged (304 Not Modified). Rendering from cache.");
+            // If data was previously loaded, render it again.
+            if (allTimetableData.length > 0) {
+                 renderTimetable();
+                 return;
             }
+            // If it's the first load and we get 304, we can't do much. 
+            // This is unlikely but handles the edge case.
+            throw new Error("Received 304, but no data was previously loaded. Try clearing cache.");
         }
+        
+        if (!response.ok) {
+            // This handles actual HTTP errors (4xx, 5xx)
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        // This line only runs if the status is 200 (OK)
+        allTimetableData = await response.json();
+        
+        if (allTimetableData.length === 0) {
+             document.getElementById('timetable-output').innerHTML = 
+                '<p>Timetable data loaded but is empty. Check the backend script date range.</p>';
+             return;
+        }
+
+        console.log("Timetable data successfully fetched (200 OK) and parsed.");
+        renderTimetable();
+        
+    } catch (error) {
+        console.error("Could not fetch or parse timetable data:", error);
+        document.getElementById('timetable-output').innerHTML = 
+            `<p style="color: red;">Error loading data: ${error.message}. Check browser console for details.</p>`;
+    }
+}
 
         // --- Rendering Logic ---
         function renderTimetable() {
