@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Timetable Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        .navigation { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .timetable { border-collapse: collapse; width: 100%; }
+        .timetable th, .timetable td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .timetable tr:nth-child(even){ background-color: #f2f2f2; }
+        .lesson-entry { margin-bottom: 15px; padding: 10px; border-left: 5px solid #007bff; background: #e9f7ff; }
+        .lesson-title { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Timetable Viewer</h1>
+    </header>
+
+    <div class="navigation">
+        <button onclick="changeWeek(-1)">← Previous Week</button>
+        <h2 id="current-week-display"></h2>
+        <button onclick="changeWeek(1)">Next Week →</button>
+    </div>
+
+    <div id="timetable-output">
+        <p>Loading timetable data...</p>
+    </div>
+
+    <script>
+        // *** IMPORTANT: REPLACE THIS URL ***
+        // This is the public URL exposed by your Cloudflare Tunnel pointing to your Flask API
+        const API_URL = 'https://api.yourdomain.com/timetable/latest'; 
+        
+        let allTimetableData = [];
+        let currentWeekStart = moment().startOf('week'); // Start on the current week
+
+        // --- Data Fetching ---
+        async function fetchTimetableData() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                allTimetableData = await response.json();
+                renderTimetable();
+            } catch (error) {
+                console.error("Could not fetch timetable data:", error);
+                document.getElementById('timetable-output').innerHTML = 
+                    '<p style="color: red;">Error loading data. Check the Cloudflare Tunnel and API.</p>';
+            }
+        }
+
+        // --- Rendering Logic ---
+        function renderTimetable() {
+            const outputDiv = document.getElementById('timetable-output');
+            outputDiv.innerHTML = ''; // Clear previous content
+
+            const weekStart = currentWeekStart.clone().startOf('week');
+            const weekEnd = currentWeekStart.clone().endOf('week');
+
+            // Update the display title
+            document.getElementById('current-week-display').textContent = 
+                `Week of ${weekStart.format('MMM D')} - ${weekEnd.format('MMM D, YYYY')}`;
+
+            const weeklyLessons = allTimetableData.filter(lesson => {
+                const lessonDate = moment(lesson.lessonDate, 'YYYY-MM-DD');
+                return lessonDate.isBetween(weekStart, weekEnd, null, '[]'); // Inclusive range
+            });
+
+            if (weeklyLessons.length === 0) {
+                outputDiv.innerHTML = '<p>No lessons found for this week.</p>';
+                return;
+            }
+
+            // Group lessons by day for a clearer display
+            const lessonsByDay = weeklyLessons.reduce((acc, lesson) => {
+                const day = moment(lesson.lessonDate, 'YYYY-MM-DD').format('dddd, YYYY-MM-DD');
+                acc[day] = acc[day] || [];
+                acc[day].push(lesson);
+                return acc;
+            }, {});
+
+            // Render the daily view
+            for (const day in lessonsByDay) {
+                const dayHeader = document.createElement('h3');
+                dayHeader.textContent = day;
+                outputDiv.appendChild(dayHeader);
+
+                lessonsByDay[day].forEach(lesson => {
+                    const lessonElement = document.createElement('div');
+                    lessonElement.className = 'lesson-entry';
+                    
+                    const time = `${lesson.lessonStart.substring(0, 5)} - ${lesson.lessonEnd.substring(0, 5)}`;
+                    const title = lesson.title || lesson.subjectName || 'Lesson';
+                    const room = lesson.roomName ? `(${lesson.roomName})` : '';
+                    const teacher = lesson.teacherAcronym || lesson.teacherFullName || 'N/A';
+
+                    lessonElement.innerHTML = `
+                        <p class="lesson-title">${time} &mdash; ${title} ${room}</p>
+                        <p>Course: ${lesson.course} | Teacher: ${teacher}</p>
+                    `;
+                    outputDiv.appendChild(lessonElement);
+                });
+            }
+        }
+
+        // --- Navigation Logic ---
+        function changeWeek(direction) {
+            currentWeekStart.add(direction, 'weeks');
+            renderTimetable();
+        }
+        
+        // Initial load
+        fetchTimetableData();
+    </script>
+
+</body>
+</html>
