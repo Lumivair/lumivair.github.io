@@ -50,7 +50,6 @@
             
             // 1. Check Cache
             if (weekCache[cacheKey]) {
-                console.log(`[Cache Hit] Week ${cacheKey}`);
                 return weekCache[cacheKey];
             }
 
@@ -65,7 +64,7 @@
                 return data;
             } catch (error) {
                 console.error("Fetch error:", error);
-                return []; // Return empty on error
+                return []; 
             }
         }
 
@@ -120,7 +119,6 @@
             // Group by Day
             const lessonsByDay = {};
             lessons.forEach(lesson => {
-                // Use date string as key
                 const dayKey = lesson.lessonDate; 
                 if (!lessonsByDay[dayKey]) lessonsByDay[dayKey] = [];
                 lessonsByDay[dayKey].push(lesson);
@@ -161,9 +159,9 @@
         updateSyncStatus();
         renderTimetable();
         
-        // Update sync timer visually every minute
+        // Update timer visually every minute
         setInterval(renderSyncTime, 60000); 
-        // Actually check backend for new sync status every 5 minutes
+        // Re-check backend every 5 minutes
         setInterval(updateSyncStatus, 300000);
     </script>
 </body>
