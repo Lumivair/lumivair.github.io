@@ -4,24 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCSR pb-1</title>
-
+    
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        /* --- Color Scheme & Reset --- */
         :root {
             --bg-color: #f4f4f4;
             --accent-color: #333333;
             --text-color: #333333;
-            --plyr-color-main: #333333;
+            --plyr-color-main: #333333; 
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -32,21 +27,18 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            /* Minimal padding to allow player to touch edges nearly */
-            padding: 1rem;
+            padding: 1rem; 
         }
 
-        /* --- Layout Container --- */
         .container {
-            width: 95%; /* Takes up almost full width */
-            max-width: 1800px; /* Cap it only on ultra-wide monitors */
+            width: 95%;
+            max-width: 1800px;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 1rem;
         }
 
-        /* --- Video Player Styling --- */
         .video-wrapper {
             width: 100%;
             border-radius: 8px;
@@ -55,14 +47,8 @@
             background: #000;
         }
 
-        /* Adjust Plyr to fit nicely */
-        .plyr {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-        }
+        .plyr { width: 100%; height: auto; border-radius: 8px; }
 
-        /* --- Text Styling --- */
         .run-time {
             font-size: 1.5rem;
             font-weight: 700;
@@ -71,7 +57,6 @@
             margin-top: 0.5rem;
         }
 
-        /* --- Download Button --- */
         .download-btn {
             display: inline-flex;
             align-items: center;
@@ -92,17 +77,9 @@
             color: #fff;
         }
 
-        /* --- Mobile Responsiveness --- */
         @media (max-width: 600px) {
-            .container {
-                width: 100%; /* Full width on mobile */
-            }
-            .video-wrapper {
-                border-radius: 0; /* Square edges on mobile for max screen usage */
-            }
-            .run-time {
-                font-size: 1.2rem;
-            }
+            .container { width: 100%; }
+            .video-wrapper { border-radius: 0; }
         }
     </style>
 </head>
@@ -111,13 +88,13 @@
     <div class="container">
         <div class="video-wrapper">
             <video id="player" playsinline controls>
-                <source src="source/MCSR pb-1.mp4" type="video/mp4" />
+                <source src="https://media.githubusercontent.com/media/[USERNAME]/[REPO-NAME]/main/MCSR/source/MCSR%20pb-1.mp4" type="video/mp4" />
             </video>
         </div>
 
         <div class="run-time">pb-1: 22:26:822</div>
 
-        <a href="source/MCSR pb-1.mp4" download="MCSR_PB_1.mp4" class="download-btn">
+        <a href="https://media.githubusercontent.com/media/[USERNAME]/[REPO-NAME]/main/MCSR/source/MCSR%20pb-1.mp4" download class="download-btn">
             <i class="fas fa-download"></i> Download
         </a>
     </div>
@@ -126,7 +103,6 @@
     <script>
         const player = new Plyr('#player', {
             controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
-            ratio: '16:9' // Force aspect ratio if needed, or remove to auto-detect
         });
     </script>
 </body>
