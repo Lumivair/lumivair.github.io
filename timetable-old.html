@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Timetable Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; background: #fafafa; color: #333; }
+        .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; margin-bottom: 20px; padding-bottom: 10px;}
+        .sync-status { font-size: 0.85em; color: #666; font-family: monospace; }
+        .navigation { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .navigation button { padding: 8px 16px; cursor: pointer; border: 1px solid #ddd; background: #fff; border-radius: 4px; transition: all 0.2s; }
+        .navigation button:hover { background: #f0f0f0; border-color: #bbb; }
+        .navigation button:focus { outline: 2px solid #007bff; }
+        
+        .lesson-entry { margin-bottom: 12px; padding: 12px; border-left: 5px solid #007bff; background: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .lesson-title { font-weight: bold; margin-bottom: 4px; font-size: 1.1em;}
+        .lesson-details { font-size: 0.9em; color: #666; }
+        .day-header { margin-top: 30px; color: #444; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .loading { text-align: center; color: #888; font-style: italic; padding: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>🗓️ Timetable</h1>
+        <div class="sync-status" id="sync-timer">Checking sync status...</div>
+    </div>
+
+    <div class="navigation">
+        <button onclick="changeWeek(-1)">← Prev</button>
+        <h3 id="current-week-display" style="margin: 0;"></h3>
+        <button onclick="changeWeek(1)">Next →</button>
+    </div>
+
+    <div id="timetable-output"></div>
+
+    <script>
+        const API_BASE = 'https://timetable.lumivair.space'; 
+        
+        // Cache object: keys are "YYYY-WW", values are arrays of lessons
+        const weekCache = {};
+        
+        let currentViewDate = moment().startOf('isoWeek');
+        let lastSyncTimestamp = 0;
+
+        // --- Data Fetching ---
+        async function fetchWeekData(year, week) {
+            const cacheKey = `${year}-${week}`;
+            
+            // 1. Check Cache
+            if (weekCache[cacheKey]) {
+                return weekCache[cacheKey];
+            }
+
+            // 2. Fetch from API
+            try {
+                const response = await fetch(`${API_BASE}/week/${year}/${week}`);
+                if (!response.ok) throw new Error("Network response was not ok");
+                const data = await response.json();
+                
+                // 3. Store in Cache
+                weekCache[cacheKey] = data;
+                return data;
+            } catch (error) {
+                console.error("Fetch error:", error);
+                return []; 
+            }
+        }
+
+        async function updateSyncStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+                lastSyncTimestamp = data.last_sync_ts;
+                renderSyncTime();
+            } catch (e) {
+                console.error("Sync check failed", e);
+            }
+        }
+
+        // --- Rendering ---
+        function renderSyncTime() {
+            const el = document.getElementById('sync-timer');
+            if (!lastSyncTimestamp) {
+                el.textContent = "Sync: Unknown";
+                return;
+            }
+            const diffMinutes = moment().diff(moment.unix(lastSyncTimestamp), 'minutes');
+            
+            if (diffMinutes < 1) el.textContent = "Synced: Just now";
+            else el.textContent = `Synced: ${diffMinutes} min ago`;
+            
+            if (diffMinutes > 60) el.style.color = 'red';
+            else el.style.color = '#666';
+        }
+
+        async function renderTimetable() {
+            const outputDiv = document.getElementById('timetable-output');
+            const year = currentViewDate.isoWeekYear();
+            const week = currentViewDate.isoWeek();
+
+            // Update Header
+            const weekStart = currentViewDate.clone().startOf('isoWeek');
+            const weekEnd = currentViewDate.clone().endOf('isoWeek');
+            document.getElementById('current-week-display').textContent = 
+                `Week ${week} (${weekStart.format('D.M')} - ${weekEnd.format('D.M')})`;
+
+            outputDiv.innerHTML = '<div class="loading">Loading lessons...</div>';
+
+            const lessons = await fetchWeekData(year, week);
+            outputDiv.innerHTML = ''; // Clear loading
+
+            if (!lessons || lessons.length === 0) {
+                outputDiv.innerHTML = '<p style="text-align:center; color:#777;">No lessons found for this week.</p>';
+                return;
+            }
+
+            // Group by Day
+            const lessonsByDay = {};
+            lessons.forEach(lesson => {
+                const dayKey = lesson.lessonDate; 
+                if (!lessonsByDay[dayKey]) lessonsByDay[dayKey] = [];
+                lessonsByDay[dayKey].push(lesson);
+            });
+
+            // Render
+            Object.keys(lessonsByDay).sort().forEach(dayDate => {
+                const dayHeader = document.createElement('h3');
+                dayHeader.className = 'day-header';
+                dayHeader.textContent = moment(dayDate).format('dddd, MMMM Do');
+                outputDiv.appendChild(dayHeader);
+
+                lessonsByDay[dayDate].forEach(lesson => {
+                    const el = document.createElement('div');
+                    el.className = 'lesson-entry';
+                    
+                    const time = `${lesson.lessonStart.substring(0, 5)} - ${lesson.lessonEnd.substring(0, 5)}`;
+                    const title = lesson.title || lesson.subjectName;
+                    const room = lesson.roomName ? ` <span style="color:#999">| ${lesson.roomName}</span>` : '';
+                    const teacher = lesson.teacherAcronym || 'N/A';
+                    
+                    el.innerHTML = `
+                        <div class="lesson-title">${time} &mdash; ${title}</div>
+                        <div class="lesson-details">${lesson.subjectName} (${lesson.course}) | ${teacher}${room}</div>
+                    `;
+                    outputDiv.appendChild(el);
+                });
+            });
+        }
+
+        // --- Navigation ---
+        window.changeWeek = function(delta) {
+            currentViewDate.add(delta, 'weeks');
+            renderTimetable();
+        };
+
+        // --- Init ---
+        updateSyncStatus();
+        renderTimetable();
+        
+        // Update timer visually every minute
+        setInterval(renderSyncTime, 60000); 
+        // Re-check backend every 5 minutes
+        setInterval(updateSyncStatus, 300000);
+    </script>
+</body>
+</html>
