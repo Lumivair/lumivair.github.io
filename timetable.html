@@ -2,66 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Timetable Dashboard</title>
+    <title>Timetable Viewer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <style>
         :root {
-            /* Light Mode Variables */
-            --bg-body: #f0f2f5;
+            /* KDE Plasma / Breeze Light */
+            --bg-body: #eff0f1;
             --bg-card: #ffffff;
-            --text-main: #2c3e50;
-            --text-sub: #6c757d;
-            --border: #e0e0e0;
-
-            --accent-blue: #3daee9; /* Plasma Blue */
-            --accent-red: #e93d3d;
-            --accent-orange: #f6a821;
-            --accent-green: #2ecc71;
-
-            --slot-bg: #ffffff;
-            --slot-hover: #f8f9fa;
+            --text-main: #232629;
+            --text-sub: #4d5c6d;
+            --border: #d3dae3;
+            --accent-blue: #3daee9;
+            --accent-red: #da4453;
+            --accent-orange: #f67400;
+            --accent-green: #27ae60;
+            --slot-bg: #fcfcfc;
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
-                /* Dark Mode Variables */
-                --bg-body: #1a1a1a;
-                --bg-card: #2a2a2a;
-                --text-main: #ecf0f1;
-                --text-sub: #b0bec5;
-                --border: #3a3a3a;
-
-                --accent-blue: #3daee9;
-                --accent-red: #cf4545;
-                --accent-orange: #d68910;
-                --accent-green: #27ae60;
-
+                /* Breeze Dark */
+                --bg-body: #1a1e24;
+                --bg-card: #2a2e34;
+                --text-main: #fcfcfc;
+                --text-sub: #bdc3c7;
+                --border: #3f4752;
                 --slot-bg: #31363b;
-                --slot-hover: #3b4045;
             }
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: "Noto Sans", sans-serif;
             background: var(--bg-body);
             color: var(--text-main);
             margin: 0;
             padding: 20px;
-            transition: background 0.3s ease;
         }
 
-        /* --- Header & Nav --- */
+        /* --- Header --- */
         .header-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--border);
             margin-bottom: 20px;
             padding-bottom: 10px;
-            border-bottom: 2px solid var(--border);
         }
-
-        .header-title { font-weight: 700; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
         .sync-status { font-size: 0.85em; color: var(--text-sub); font-family: monospace; }
 
         .navigation {
@@ -70,203 +57,105 @@
             align-items: center;
             margin-bottom: 20px;
             background: var(--bg-card);
-            padding: 10px 15px;
-            border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
         }
-
-        .nav-btn {
+        .navigation button {
             padding: 8px 16px;
             cursor: pointer;
             border: 1px solid var(--border);
             background: var(--bg-body);
             color: var(--text-main);
-            border-radius: 4px;
-            font-weight: 600;
-            transition: all 0.2s;
+            border-radius: 2px;
         }
-        .nav-btn:hover { background: var(--border); }
+        .navigation button:hover { background: var(--accent-blue); color: white; }
 
-        /* --- Timetable Grid (Desktop) --- */
+        /* --- Desktop Grid --- */
         .desktop-grid {
-            display: none; /* Hidden on mobile */
-            display: grid;
-            grid-template-columns: 60px repeat(5, 1fr); /* Time col + 5 days */
+            display: none;
+            grid-template-columns: 60px repeat(5, 1fr);
             gap: 1px;
-            background: var(--border); /* Creates grid lines */
+            background: var(--border);
             border: 1px solid var(--border);
-            border-radius: 6px;
-            overflow: hidden;
+            border-radius: 3px;
         }
-
-        .grid-header {
-            background: var(--bg-card);
-            padding: 10px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 0.9em;
-        }
-
+        .grid-header { background: var(--bg-card); padding: 10px; text-align: center; font-weight: bold; }
         .time-col {
             background: var(--bg-card);
-            padding: 10px 5px;
-            text-align: right;
-            font-size: 0.75rem;
-            color: var(--text-sub);
-            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            padding: 10px 0;
+            font-size: 0.75em;
+            text-align: center;
+            color: var(--text-sub);
         }
+        .day-column { background: var(--bg-body); position: relative; min-height: 700px; }
 
-        .day-column {
-            background: var(--bg-body);
-            position: relative;
-            min-height: 600px; /* Force height */
-        }
-
-        /* --- Lesson Cards (Shared Styles) --- */
+        /* --- Cards --- */
         .lesson-card {
             background: var(--slot-bg);
             padding: 8px;
-            border-radius: 4px;
             border-left: 4px solid var(--accent-blue);
-            font-size: 0.85rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transition: transform 0.1s;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            font-size: 0.85em;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            position: absolute;
+            left: 2px; right: 2px;
+            border-radius: 2px;
         }
-
-        .lesson-card:hover { transform: scale(1.01); z-index: 5; }
-
-        /* Status Variants */
-        .status-cancelled {
-            background: rgba(233, 61, 61, 0.1);
-            border-left-color: var(--accent-red);
-            opacity: 0.8;
-        }
-        .status-cancelled .lesson-title { text-decoration: line-through; }
-
-        .status-substitution {
-            background: rgba(246, 168, 33, 0.1);
-            border-left-color: var(--accent-orange);
-        }
-
+        .status-cancelled { background: rgba(218, 68, 83, 0.1); border-left-color: var(--accent-red); }
+        .status-cancelled .title { text-decoration: line-through; }
+        .status-substitution { background: rgba(246, 116, 0, 0.1); border-left-color: var(--accent-orange); }
         .status-event {
-            background: rgba(46, 204, 113, 0.15);
-            border-left-color: var(--accent-green);
-            text-align: center;
-            align-items: center;
-            font-weight: bold;
-            height: 100%;
+            position: absolute; top:0; bottom:0; left:0; right:0;
+            background: var(--bg-card); border-left: 5px solid var(--accent-green);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
         }
 
-        .lesson-header { display: flex; justify-content: space-between; margin-bottom: 2px; }
-        .lesson-title { font-weight: 700; font-size: 1em; }
-        .lesson-room { font-weight: 600; color: var(--text-sub); }
-        .room-changed { color: var(--accent-red); font-weight: 800; }
-        .lesson-info { font-size: 0.8em; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .cancellation-msg { color: var(--accent-red); font-size: 0.75em; font-weight: bold; display: block; margin-top: 2px; }
+        .room-changed { color: var(--accent-red); font-weight: bold; }
+        .msg { font-weight: bold; font-size: 0.8em; margin-top: 4px; display: block; }
 
-        /* --- Mobile List View --- */
+        /* --- Mobile List --- */
         .mobile-list { display: block; }
-        .day-group { margin-bottom: 25px; }
-        .day-title {
-            font-size: 1.1rem;
-            margin-bottom: 10px;
-            color: var(--text-sub);
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 5px;
-        }
+        .day-group { margin-bottom: 20px; }
+        .day-title { font-weight: bold; border-bottom: 1px solid var(--border); margin-bottom: 10px; padding-bottom: 5px; }
         .mobile-entry {
-            display: flex;
-            background: var(--bg-card);
-            margin-bottom: 8px;
-            border-radius: 6px;
-            overflow: hidden;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            display: flex; background: var(--bg-card); margin-bottom: 5px;
+            border: 1px solid var(--border); border-left: 5px solid var(--accent-blue);
         }
-        .mobile-time {
-            width: 60px;
-            background: rgba(0,0,0,0.03);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-size: 0.75rem;
-            color: var(--text-sub);
-            padding: 0 5px;
-            text-align: center;
-        }
-        .mobile-content {
-            padding: 10px;
-            flex-grow: 1;
-            border-left: 4px solid var(--accent-blue);
-        }
+        .m-time { width: 60px; padding: 10px; font-size: 0.75em; border-right: 1px solid var(--border); text-align: center; }
+        .m-content { padding: 10px; flex: 1; }
 
-        /* --- Responsive Switching --- */
-        @media (min-width: 768px) {
+        @media (min-width: 800px) {
             .mobile-list { display: none; }
             .desktop-grid { display: grid; }
-            body { max-width: 1400px; margin: auto; }
-        }
-
-        /* Full day handling in Grid */
-        .full-day-block {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: var(--bg-card);
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            border-left: 4px solid var(--accent-green);
-        }
-        .full-day-text {
-            background: var(--accent-green);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
 
     <div class="header-container">
-        <div class="header-title">🗓️ Timetable</div>
-        <div class="sync-status" id="sync-timer">Sync: Checking...</div>
+        <h1>🗓️ Timetable</h1>
+        <div class="sync-status" id="sync-timer">Checking sync status...</div>
     </div>
 
     <div class="navigation">
-        <button class="nav-btn" onclick="changeWeek(-1)">← Prev</button>
-        <h3 id="current-week-display" style="margin: 0; font-size: 1rem;"></h3>
-        <button class="nav-btn" onclick="changeWeek(1)">Next →</button>
+        <button onclick="changeWeek(-1)">← Prev</button>
+        <h3 id="current-week-display" style="margin: 0;"></h3>
+        <button onclick="changeWeek(1)">Next →</button>
     </div>
 
     <div id="mobile-output" class="mobile-list"></div>
 
     <div id="desktop-output" class="desktop-grid">
         <div class="grid-header">Time</div>
-        <div class="grid-header">Mon</div>
-        <div class="grid-header">Tue</div>
-        <div class="grid-header">Wed</div>
-        <div class="grid-header">Thu</div>
-        <div class="grid-header">Fri</div>
-
+        <div class="grid-header">Mon</div><div class="grid-header">Tue</div><div class="grid-header">Wed</div><div class="grid-header">Thu</div><div class="grid-header">Fri</div>
         <div class="time-col">
-            <span>07:45</span><span>08:40</span><span>09:35</span>
-            <span>10:40</span><span>11:35</span><span>12:30</span>
-            <span>13:30</span><span>14:20</span><span>15:15</span>
-            <span>16:10</span><span>17:05</span>
+            <span>07:45</span><span>09:00</span><span>10:30</span><span>12:00</span><span>13:30</span><span>15:00</span><span>16:30</span><span>18:00</span>
         </div>
-
-        <div class="day-column" id="day-0"></div> <div class="day-column" id="day-1"></div> <div class="day-column" id="day-2"></div> <div class="day-column" id="day-3"></div> <div class="day-column" id="day-4"></div> </div>
+        <div class="day-column" id="day-0"></div><div class="day-column" id="day-1"></div><div class="day-column" id="day-2"></div><div class="day-column" id="day-3"></div><div class="day-column" id="day-4"></div>
+    </div>
 
     <script>
         const API_BASE = 'https://timetable.lumivair.space';
@@ -274,256 +163,111 @@
         let currentViewDate = moment().startOf('isoWeek');
         let lastSyncTimestamp = 0;
 
-        // --- Config ---
-        const DAY_START_MIN = 7 * 60 + 45; // 07:45
-        const DAY_END_MIN = 18 * 60;       // 18:00
-        const PIXELS_PER_MIN = 1.2;        // Adjust for grid height
+        const GRID_START = 7 * 60 + 45;
+        const PX_PER_MIN = 1.3;
 
-        // --- Fetching Logic (Same as original) ---
         async function fetchWeekData(year, week) {
             const cacheKey = `${year}-${week}`;
             if (weekCache[cacheKey]) return weekCache[cacheKey];
-
             try {
-                // In a real scenario, this fetches from your python server's saved JSONs
-                // For this demo, we assume the server serves the JSON structure you provided
-                const response = await fetch(`${API_BASE}/weeks/${year}-${week}.json`);
-                if (!response.ok) throw new Error("No data");
+                const response = await fetch(`${API_BASE}/week/${year}/${week}`);
                 const data = await response.json();
                 weekCache[cacheKey] = data;
                 return data;
-            } catch (error) {
-                console.warn("Fetch error:", error);
-                return [];
-            }
+            } catch (error) { return []; }
         }
 
         async function updateSyncStatus() {
             try {
-                const response = await fetch(`${API_BASE}/meta.json`);
+                const response = await fetch(`${API_BASE}/status`);
                 const data = await response.json();
                 lastSyncTimestamp = data.last_sync_ts;
                 renderSyncTime();
-            } catch (e) { console.log("Sync check silent fail"); }
+            } catch (e) {}
         }
 
         function renderSyncTime() {
             const el = document.getElementById('sync-timer');
-            if (!lastSyncTimestamp) { el.textContent = "Sync: Unknown"; return; }
+            if (!lastSyncTimestamp) return;
             const diff = moment().diff(moment.unix(lastSyncTimestamp), 'minutes');
             el.textContent = diff < 1 ? "Synced: Just now" : `Synced: ${diff} min ago`;
             el.style.color = diff > 60 ? 'var(--accent-red)' : 'var(--text-sub)';
         }
 
-        // --- Rendering Logic ---
         async function renderTimetable() {
-            const mobileDiv = document.getElementById('mobile-output');
-            const desktopDays = [0,1,2,3,4].map(i => document.getElementById(`day-${i}`));
-
-            // Clear previous
-            mobileDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#888">Loading...</div>';
-            desktopDays.forEach(d => d.innerHTML = '');
-
+            const mobileOut = document.getElementById('mobile-output');
+            const dayCols = [0,1,2,3,4].map(i => document.getElementById(`day-${i}`));
             const year = currentViewDate.isoWeekYear();
             const week = currentViewDate.isoWeek();
 
-            // Header Update
-            const start = currentViewDate.clone().startOf('isoWeek');
-            const end = currentViewDate.clone().endOf('isoWeek');
-            document.getElementById('current-week-display').textContent = `Week ${week} (${start.format('DD.MM')} - ${end.format('DD.MM')})`;
+            document.getElementById('current-week-display').textContent = `Week ${week} (${currentViewDate.format('D.M')} - ${currentViewDate.clone().endOf('isoWeek').format('D.M')})`;
+
+            mobileOut.innerHTML = 'Loading...';
+            dayCols.forEach(c => c.innerHTML = '');
 
             const lessons = await fetchWeekData(year, week);
-            mobileDiv.innerHTML = ''; // Clear loading
+            mobileOut.innerHTML = '';
 
-            if (!lessons || lessons.length === 0) {
-                mobileDiv.innerHTML = '<p style="text-align:center;">No data for this week.</p>';
-                return;
-            }
+            const days = [];
+            for(let i=0; i<5; i++) days.push(currentViewDate.clone().add(i, 'days').format('YYYY-MM-DD'));
 
-            // Group by Date
-            const lessonsByDate = {};
-            const blockEventsByDate = {}; // Store full day blockers
+            days.forEach((date, idx) => {
+                const dayLessons = lessons.filter(l => l.lessonDate === date);
+                const blocker = dayLessons.find(l => l.isFullDay || l.timetableEntryTypeLong === 'block substitution' || l.lessonStart === "00:00:00");
 
-            // 1. Pre-process to find Blockers (Full Day Events)
-            lessons.forEach(l => {
-                const date = l.lessonDate;
-                // Check for block substitutions or full day flags
-                if ((l.timetableEntryTypeLong === "block substitution" || l.isFullDay) &&
-                   (l.lessonStart === "00:00:00" || l.timetableEntryTypeLong === "block substitution")) {
-                    blockEventsByDate[date] = l;
-                }
-            });
+                // Mobile
+                const group = document.createElement('div');
+                group.className = 'day-group';
+                group.innerHTML = `<div class="day-title">${moment(date).format('dddd, D. MMMM')}</div>`;
 
-            // 2. Group standard lessons (Skip if day is blocked)
-            lessons.forEach(l => {
-                // If this day has a blocker, ONLY add the blocker, ignore regular lessons
-                if (blockEventsByDate[l.lessonDate] && l !== blockEventsByDate[l.lessonDate]) return;
-
-                if (!lessonsByDate[l.lessonDate]) lessonsByDate[l.lessonDate] = [];
-                lessonsByDate[l.lessonDate].push(l);
-            });
-
-            // 3. Render Loop
-            const daysInWeek = [];
-            for(let i=0; i<5; i++) daysInWeek.push(start.clone().add(i, 'days').format('YYYY-MM-DD'));
-
-            daysInWeek.forEach((dateKey, index) => {
-                const dayLessons = lessonsByDate[dateKey] || [];
-                const dayBlocker = blockEventsByDate[dateKey];
-
-                // -- Mobile Render --
-                const dayContainer = document.createElement('div');
-                dayContainer.className = 'day-group';
-
-                const dayTitle = document.createElement('div');
-                dayTitle.className = 'day-title';
-                dayTitle.innerHTML = moment(dateKey).format('dddd <small>(DD.MM)</small>');
-                dayContainer.appendChild(dayTitle);
-
-                if (dayBlocker) {
-                    // Render Full Day Blocker Card for Mobile
-                    dayContainer.appendChild(createMobileCard(dayBlocker, true));
-                } else if (dayLessons.length > 0) {
-                    dayLessons.forEach(l => dayContainer.appendChild(createMobileCard(l)));
-                } else {
-                    const empty = document.createElement('div');
-                    empty.style.padding = "10px"; empty.style.fontStyle="italic"; empty.style.color="#999";
-                    empty.textContent = "No lessons";
-                    dayContainer.appendChild(empty);
-                }
-                mobileDiv.appendChild(dayContainer);
-
-                // -- Desktop Render --
-                const col = desktopDays[index];
-                if (!col) return; // Saturday/Sunday ignored in grid
-
-                if (dayBlocker) {
-                    // Full height blocker
-                    const blockEl = document.createElement('div');
-                    blockEl.className = 'full-day-block';
-                    blockEl.innerHTML = `<span class="full-day-text">${dayBlocker.title || "Special Event"}</span><br><small>${dayBlocker.message || ""}</small>`;
-                    col.appendChild(blockEl);
+                if (blocker) {
+                    group.innerHTML += `
+                        <div class="mobile-entry" style="border-left-color: var(--accent-green)">
+                            <div class="m-time">DAY</div>
+                            <div class="m-content"><b>${blocker.title}</b><br>${blocker.message || ''}</div>
+                        </div>`;
                 } else {
                     dayLessons.forEach(l => {
-                        const el = createDesktopCard(l);
-                        if (el) col.appendChild(el);
+                        const isCancel = l.isCancelled || l.timetableEntryTypeLong?.includes('cancel');
+                        const isSub = l.timetableEntryType === 'substitution';
+                        const border = isCancel ? 'var(--accent-red)' : (isSub ? 'var(--accent-orange)' : 'var(--accent-blue)');
+                        group.innerHTML += `
+                            <div class="mobile-entry" style="border-left-color: ${border}">
+                                <div class="m-time">${l.lessonStart.slice(0,5)}<br>${l.lessonEnd.slice(0,5)}</div>
+                                <div class="m-content">
+                                    <span class="title" style="${isCancel ? 'text-decoration:line-through' : ''}"><b>${l.title}</b></span>
+                                    <br><small>${l.teacherAcronym} | ${l.roomName}</small>
+                                    ${l.message ? `<br><span class="msg" style="color:${border}">${l.message}</span>` : ''}
+                                </div>
+                            </div>`;
+                    });
+                }
+                mobileOut.appendChild(group);
+
+                // Desktop
+                const col = dayCols[idx];
+                if (blocker) {
+                    col.innerHTML = `<div class="status-event"><b>${blocker.title}</b><p>${blocker.message || ''}</p></div>`;
+                } else {
+                    dayLessons.forEach(l => {
+                        const start = moment(l.lessonStart, "HH:mm:ss").diff(moment(l.lessonStart, "HH:mm:ss").startOf('day'), 'minutes');
+                        const end = moment(l.lessonEnd, "HH:mm:ss").diff(moment(l.lessonEnd, "HH:mm:ss").startOf('day'), 'minutes');
+                        const card = document.createElement('div');
+                        card.className = 'lesson-card';
+                        if (l.isCancelled || l.timetableEntryTypeLong?.includes('cancel')) card.classList.add('status-cancelled');
+                        else if (l.timetableEntryType === 'substitution') card.classList.add('status-substitution');
+
+                        card.style.top = `${(start - GRID_START) * PX_PER_MIN}px`;
+                        card.style.height = `${(end - start) * PX_PER_MIN}px`;
+                        card.innerHTML = `<b>${l.title}</b><br>${l.teacherAcronym} <span class="${l.isRoomChanged ? 'room-changed' : ''}">${l.roomName}</span>`;
+                        if (l.message) card.innerHTML += `<span class="msg">${l.message}</span>`;
+                        col.appendChild(card);
                     });
                 }
             });
         }
 
-        // --- Helper: Mobile Card Builder ---
-        function createMobileCard(l, isBlocker=false) {
-            const el = document.createElement('div');
-            el.className = 'mobile-entry';
-
-            // Determine styles
-            let borderClass = '';
-            if (l.isCancelled || l.timetableEntryTypeLong === 'canceled lesson') borderClass = 'status-cancelled';
-            else if (l.timetableEntryType === 'substitution') borderClass = 'status-substitution';
-            else if (isBlocker) borderClass = 'status-event';
-
-            el.querySelector('.mobile-content')?.classList.add(borderClass); // Apply coloring logic
-
-            // Content
-            const timeStr = isBlocker ? "ALL<br>DAY" : `${l.lessonStart.slice(0,5)}<br>${l.lessonEnd.slice(0,5)}`;
-            const roomStr = l.roomName ? ` | Rm ${l.roomName}` : '';
-            const teacherStr = l.teacherAcronym || '';
-            const msg = l.message ? `<div class="cancellation-msg">${l.message}</div>` : '';
-
-            // Apply specific class to container wrapper to handle border color
-            const contentStyle = `border-left: 4px solid ${getColor(l, isBlocker)}`;
-            const bgStyle = `background: ${getBg(l, isBlocker)}`;
-
-            el.innerHTML = `
-                <div class="mobile-time">${timeStr}</div>
-                <div class="mobile-content" style="${contentStyle}; ${bgStyle}">
-                    <div class="lesson-title">${l.title || "Event"}${msg}</div>
-                    <div class="lesson-details">
-                        ${l.course || ""} <br>
-                        ${teacherStr}${roomStr}
-                    </div>
-                </div>
-            `;
-            return el;
-        }
-
-        // --- Helper: Desktop Card Builder ---
-        function createDesktopCard(l) {
-            // Calculate Position
-            const parseTime = (t) => {
-                const [h, m] = t.split(':').map(Number);
-                return h * 60 + m;
-            };
-
-            const startMin = parseTime(l.lessonStart);
-            const endMin = parseTime(l.lessonEnd);
-
-            // Skip if outside bounds (e.g. night classes?)
-            if (startMin < DAY_START_MIN - 60) return null;
-
-            const top = (startMin - DAY_START_MIN) * PIXELS_PER_MIN;
-            const height = (endMin - startMin) * PIXELS_PER_MIN;
-
-            const el = document.createElement('div');
-            el.className = 'lesson-card';
-            el.style.position = 'absolute';
-            el.style.top = `${top}px`;
-            el.style.height = `${height - 2}px`; // -2 for gap
-            el.style.left = '2px';
-            el.style.right = '2px';
-
-            // Styling Logic
-            let title = l.title;
-            let sub = l.teacherAcronym;
-            let room = l.roomName || "?";
-            let roomClass = "";
-            let cancelMsg = "";
-
-            if (l.isRoomChanged) roomClass = "room-changed";
-
-            // Status Classes
-            if (l.isCancelled || (l.timetableEntryTypeLong && l.timetableEntryTypeLong.includes('cancel'))) {
-                el.classList.add('status-cancelled');
-                if (l.message) cancelMsg = `<span class="cancellation-msg">${l.message}</span>`;
-            }
-            else if (l.timetableEntryType === 'substitution') {
-                el.classList.add('status-substitution');
-                if (l.message) cancelMsg = `<span class="cancellation-msg" style="color:var(--accent-orange)">${l.message}</span>`;
-            }
-
-            el.innerHTML = `
-                <div class="lesson-header">
-                    <span class="lesson-title">${title}</span>
-                    <span class="lesson-room ${roomClass}">${room}</span>
-                </div>
-                <div class="lesson-info">${sub}</div>
-                ${cancelMsg}
-            `;
-            return el;
-        }
-
-        // --- Helper: Colors ---
-        function getColor(l, isBlocker) {
-            if (isBlocker) return 'var(--accent-green)';
-            if (l.isCancelled || l.timetableEntryTypeLong?.includes('cancel')) return 'var(--accent-red)';
-            if (l.timetableEntryType === 'substitution') return 'var(--accent-orange)';
-            return 'var(--accent-blue)';
-        }
-        function getBg(l, isBlocker) {
-             if (isBlocker) return 'rgba(46, 204, 113, 0.1)';
-             if (l.isCancelled) return 'rgba(233, 61, 61, 0.05)';
-             if (l.timetableEntryType === 'substitution') return 'rgba(246, 168, 33, 0.05)';
-             return 'transparent';
-        }
-
-        // --- Navigation ---
-        window.changeWeek = function(delta) {
-            currentViewDate.add(delta, 'weeks');
-            renderTimetable();
-        };
-
-        // --- Init ---
+        window.changeWeek = delta => { currentViewDate.add(delta, 'weeks'); renderTimetable(); };
         updateSyncStatus();
         renderTimetable();
         setInterval(renderSyncTime, 60000);
