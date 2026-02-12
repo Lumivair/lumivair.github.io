@@ -1,277 +1,1041 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Timetable Viewer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-    <style>
-        :root {
-            /* KDE Plasma / Breeze Light */
-            --bg-body: #eff0f1;
-            --bg-card: #ffffff;
-            --text-main: #232629;
-            --text-sub: #4d5c6d;
-            --border: #d3dae3;
-            --accent-blue: #3daee9;
-            --accent-red: #da4453;
-            --accent-orange: #f67400;
-            --accent-green: #27ae60;
-            --slot-bg: #fcfcfc;
-        }
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Timetable – multi‑week holidays, live sync, room info</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+<style>
+:root{
+  --bg-body:#eff0f1;
+  --bg-card:#ffffff;
+  --text-main:#232629;
+  --text-sub:#4d5c6d;
+  --border:#d3dae3;
+  --accent-blue:#3daee9;
+  --accent-red:#da4453;
+  --accent-orange:#f67400;
+  --accent-green:#27ae60;
+  --slot-bg:#fcfcfc;
+  --grid-step: 96px;
+  --grid-offset: 0px;
+  --day-total-height: 1014px;
+  --grid-line: rgba(0,0,0,0.04);
 
-        @media (prefers-color-scheme: dark) {
-            :root {
-                /* Breeze Dark */
-                --bg-body: #1a1e24;
-                --bg-card: #2a2e34;
-                --text-main: #fcfcfc;
-                --text-sub: #bdc3c7;
-                --border: #3f4752;
-                --slot-bg: #31363b;
-            }
-        }
+  /* 🔧 RED LINE DARKNESS CONTROL */
+  --current-time-line-color: rgba(218, 68, 83, 0.6);
+  --current-time-line-dark-color: rgba(218, 68, 83, 0.6); /* same as main line – light mode only */
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg-body:#1a1e24;
+    --bg-card:#2a2e34;
+    --text-main:#fcfcfc;
+    --text-sub:#bdc3c7;
+    --border:#3f4752;
+    --slot-bg:#31363b;
+    --grid-line: rgba(255,255,255,0.03);
+    --current-time-line-color: rgba(218, 68, 83, 0.6);
+    --current-time-line-dark-color: rgba(73, 35, 49, 1); /* darker for dark mode */
+  }
+}
+*{box-sizing:border-box}
+body{
+  margin:0;padding:20px;
+  font-family:"Noto Sans",sans-serif;
+  background:var(--bg-body);color:var(--text-main);
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  overflow-y: auto;
+}
 
-        body {
-            font-family: "Noto Sans", sans-serif;
-            background: var(--bg-body);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-        }
+/* ——— COMPACT TITLE ——— */
+.header-container{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);margin-bottom:4px;padding-bottom:2px}
+.header-container h1{font-size:0.9rem;margin:0}
+.sync-status{font-size:0.75em;color:var(--text-sub);font-family:monospace}
 
-        /* --- Header --- */
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-        }
-        .sync-status { font-size: 0.85em; color: var(--text-sub); font-family: monospace; }
+/* ——— DESKTOP NAVIGATION: perfectly centered week ——— */
+.navigation{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin:2px 0 6px 0;
+  background:var(--bg-card);
+  padding:8px 12px;
+  border-radius:4px;
+  border:1px solid var(--border);
+}
+.nav-left, .nav-right {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:0 0 100px;
+  min-width:150px;
+}
+.nav-left { flex-basis: 230px; }
+.nav-right { flex-basis: 100px; }
+.nav-center {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex:0 1 auto;
+  padding:0 8px;
+}
+.nav-center h3{
+  font-size:0.95rem;
+  margin:0;
+  white-space:nowrap;
+}
+.nav-left button{
+  padding:4px 8px;
+  cursor:pointer;
+  border:1px solid var(--border);
+  background:var(--bg-body);
+  color:var(--text-main);
+  border-radius:2px;
+  font-size:0.85rem;
+}
+.nav-left button:hover{
+  background:var(--accent-blue);
+  color:white;
+}
+.nav-right { /* empty placeholder */ }
 
-        .navigation {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            background: var(--bg-card);
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid var(--border);
-        }
-        .navigation button {
-            padding: 8px 16px;
-            cursor: pointer;
-            border: 1px solid var(--border);
-            background: var(--bg-body);
-            color: var(--text-main);
-            border-radius: 2px;
-        }
-        .navigation button:hover { background: var(--accent-blue); color: white; }
+/* ——— MOBILE: week above buttons, no side columns ——— */
+@media (max-width: 799px) {
+  .navigation {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+  }
+  .nav-left, .nav-right, .nav-center {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    flex-basis: auto;
+  }
+  .nav-right {
+    display: none;
+  }
+  .nav-center {
+    order: -1;
+    justify-content: center;
+    margin-bottom: 10px;
+    padding: 0;
+  }
+  .nav-center h3 {
+    white-space: normal;
+    text-align: center;
+    font-size: 1rem;
+  }
+  .nav-left {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+  .nav-left button {
+    flex: 0 1 auto;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+  }
+}
 
-        /* --- Desktop Grid --- */
-        .desktop-grid {
-            display: none;
-            grid-template-columns: 60px repeat(5, 1fr);
-            gap: 1px;
-            background: var(--border);
-            border: 1px solid var(--border);
-            border-radius: 3px;
-        }
-        .grid-header { background: var(--bg-card); padding: 10px; text-align: center; font-weight: bold; }
-        .time-col {
-            background: var(--bg-card);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 10px 0;
-            font-size: 0.75em;
-            text-align: center;
-            color: var(--text-sub);
-        }
-        .day-column { background: var(--bg-body); position: relative; min-height: 700px; }
+/* ——— MOBILE LIST – SYMMETRICAL, INSIDE BODY PADDING ——— */
+#mobile-output{width:100%}
+.mobile-list{
+  display:block;
+  width:100%;
+  margin-left:0;
+  padding:0;
+  box-sizing:border-box;
+}
+.day-group{margin-bottom:20px}
+.day-title{
+  font-weight:bold;
+  border-bottom:1px solid var(--border);
+  margin-bottom:10px;
+  padding-bottom:5px;
+  padding-left:0;
+}
+.mobile-entry{
+  display:flex;
+  background:var(--bg-card);
+  margin-bottom:6px;
+  border:1px solid var(--border);
+  border-left:5px solid var(--accent-blue);
+  border-radius:2px;
+  overflow:hidden;
+  width:100%;
+}
+.m-time{
+  width:60px;
+  padding:10px 4px;
+  font-size:0.75em;
+  border-right:1px solid var(--border);
+  text-align:center;
+  color:var(--text-sub);
+  background:var(--bg-card);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  line-height:1.3;
+}
+.m-content{
+  padding:10px;
+  flex:1;
+  background:var(--bg-card);
+  font-size:0.85em;
+}
+.m-content .title{ font-weight:700; }
+.m-content small{ color:var(--text-sub); font-size:0.8em; }
+.m-content .msg{ font-size:0.75em; margin-top:4px; display:block; font-weight:bold; }
 
-        /* --- Cards --- */
-        .lesson-card {
-            background: var(--slot-bg);
-            padding: 8px;
-            border-left: 4px solid var(--accent-blue);
-            font-size: 0.85em;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            position: absolute;
-            left: 2px; right: 2px;
-            border-radius: 2px;
-        }
-        .status-cancelled { background: rgba(218, 68, 83, 0.1); border-left-color: var(--accent-red); }
-        .status-cancelled .title { text-decoration: line-through; }
-        .status-substitution { background: rgba(246, 116, 0, 0.1); border-left-color: var(--accent-orange); }
-        .status-event {
-            position: absolute; top:0; bottom:0; left:0; right:0;
-            background: var(--bg-card); border-left: 5px solid var(--accent-green);
-            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
-        }
+/* ——— DESKTOP GRID – WITH RED LINE UNDER LESSONS & DARKER UNDER CURRENT ——— */
+.desktop-grid{
+  display:none;
+  grid-template-columns:80px repeat(5,1fr);
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:3px;
+  position:relative;
+  overflow:visible;
+  width:100%;
+  margin-bottom:30px;
+}
+.grid-header{background:var(--bg-card);padding:8px;text-align:center;font-weight:bold;font-size:0.95rem}
+.time-col{
+  background:var(--bg-card);
+  display:flex;
+  flex-direction:column;
+  padding:10px 6px;
+  font-size:0.85em;
+  text-align:center;
+  color:var(--text-sub);
+  gap:0;
+  width:80px;
+}
+.time-col .time-label{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:var(--grid-step);
+  border-bottom:1px dashed var(--border);
+}
+.day-column{
+  background:var(--bg-body);
+  position:relative;
+  min-height:var(--day-total-height);
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--grid-step) - 1px),
+      var(--grid-line) calc(var(--grid-step) - 1px),
+      var(--grid-line) var(--grid-step)
+    );
+  background-position: 0 var(--grid-offset);
+  padding-bottom:30px;
+}
+.lesson-card{
+  background:var(--slot-bg);
+  padding:14px 14px;
+  border-left:5px solid var(--accent-blue);
+  font-size:0.95em;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+  position:absolute;
+  left:8px;
+  right:8px;
+  border-radius:6px;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  overflow:visible;
+  transition: all 0.1s ease;
+  z-index: 5;
+}
+/* ---- card content – positioned above the darker overlay ---- */
+.lesson-card .card-row1,
+.lesson-card .card-row2,
+.lesson-card .msg {
+  position: relative;
+  z-index: 2;
+}
+.card-row1{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  width:100%;
+  margin-bottom:8px;
+}
+.card-row1 .title{
+  font-weight:700;
+  font-size:1em;
+  line-height:1.2;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  flex:1 1 auto;
+}
+.card-row1 .time-range{
+  font-size:1em;
+  color:var(--text-sub);
+  white-space:nowrap;
+  margin-left:12px;
+  flex-shrink:0;
+}
+.card-row2{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  width:100%;
+}
+.card-meta{
+  display:flex;
+  justify-content:space-between;
+  width:100%;
+  color:var(--text-sub);
+  font-size:0.9em;
+}
+.card-meta .teacher{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.card-meta .room{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-left:12px; }
+.status-cancelled{background:rgba(218,68,83,0.06);border-left-color:var(--accent-red)}
+.status-cancelled .title{text-decoration:line-through}
+.status-substitution{background:rgba(246,116,0,0.05);border-left-color:var(--accent-orange)}
+.status-current {
+  border-left-color: var(--accent-red) !important;
+  background: rgba(218,68,83,0.08);
+  box-shadow: 0 0 0 1px var(--accent-red);
+  z-index: 6;
+}
+/* ---- current time line – under lessons, semi‑transparent ---- */
+.current-time-line {
+  position: absolute;
+  left: 80px;
+  right: 0;
+  height: 2px;
+  background-color: var(--current-time-line-color);
+  z-index: 1;
+  pointer-events: none;
+  display: none;
+}
+/* ---- darker line segment inside current lesson cards – behind text ---- */
+.current-lesson-time-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--current-time-line-dark-color);
+  z-index: 1;
+  pointer-events: none;
+  display: none;
+}
+.overlay-event{
+  position:absolute;
+  left:6px;
+  right:6px;
+  border-left:5px solid var(--accent-green);
+  background:var(--bg-card);
+  padding:12px;
+  z-index:8;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+  border-radius:3px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.12);
+}
+.lesson-popup{position:fixed;z-index:9999;max-width:440px;min-width:220px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,0.18);padding:12px;color:var(--text-main);font-size:0.95em}
+.lesson-popup h4{margin:0 0 8px 0;font-size:1.05em}
+.lesson-popup .line{margin:6px 0;color:var(--text-sub);font-size:0.92em}
+.lesson-popup .flag{display:inline-block;padding:4px 8px;border-radius:12px;font-size:0.8em;margin-left:6px}
+.popup-close{position:absolute;right:8px;top:8px;cursor:pointer;background:transparent;border:0;font-size:1.05em;color:var(--text-sub)}
 
-        .room-changed { color: var(--accent-red); font-weight: bold; }
-        .msg { font-weight: bold; font-size: 0.8em; margin-top: 4px; display: block; }
-
-        /* --- Mobile List --- */
-        .mobile-list { display: block; }
-        .day-group { margin-bottom: 20px; }
-        .day-title { font-weight: bold; border-bottom: 1px solid var(--border); margin-bottom: 10px; padding-bottom: 5px; }
-        .mobile-entry {
-            display: flex; background: var(--bg-card); margin-bottom: 5px;
-            border: 1px solid var(--border); border-left: 5px solid var(--accent-blue);
-        }
-        .m-time { width: 60px; padding: 10px; font-size: 0.75em; border-right: 1px solid var(--border); text-align: center; }
-        .m-content { padding: 10px; flex: 1; }
-
-        @media (min-width: 800px) {
-            .mobile-list { display: none; }
-            .desktop-grid { display: grid; }
-        }
-    </style>
+@media (min-width:800px){
+  .mobile-list{display:none}
+  .desktop-grid{display:grid}
+}
+@media (max-width:560px){
+  .lesson-popup{left:10px !important;right:10px !important;top:10vh !important;max-width:none}
+  .m-time{width:60px; font-size:0.7em}
+  .nav-left button { padding:6px 8px; }
+}
+</style>
 </head>
 <body>
 
-    <div class="header-container">
-        <h1>🗓️ Timetable</h1>
-        <div class="sync-status" id="sync-timer">Checking sync status...</div>
-    </div>
+<div class="header-container">
+  <h1>🗓️ Timetable</h1>
+  <div class="sync-status" id="sync-timer">Checking sync status...</div>
+</div>
 
-    <div class="navigation">
-        <button onclick="changeWeek(-1)">← Prev</button>
-        <h3 id="current-week-display" style="margin: 0;"></h3>
-        <button onclick="changeWeek(1)">Next →</button>
-    </div>
+<div class="navigation">
+  <div class="nav-left">
+    <button onclick="changeWeek(-1)">← Prev</button>
+    <button onclick="goToCurrentWeek()">🏠 Home</button>
+    <button onclick="changeWeek(1)">Next →</button>
+  </div>
+  <div class="nav-center">
+    <h3 id="current-week-display"></h3>
+  </div>
+  <div class="nav-right"></div>
+</div>
 
-    <div id="mobile-output" class="mobile-list"></div>
+<div id="mobile-output" class="mobile-list"></div>
 
-    <div id="desktop-output" class="desktop-grid">
-        <div class="grid-header">Time</div>
-        <div class="grid-header">Mon</div><div class="grid-header">Tue</div><div class="grid-header">Wed</div><div class="grid-header">Thu</div><div class="grid-header">Fri</div>
-        <div class="time-col">
-            <span>07:45</span><span>09:00</span><span>10:30</span><span>12:00</span><span>13:30</span><span>15:00</span><span>16:30</span><span>18:00</span>
-        </div>
-        <div class="day-column" id="day-0"></div><div class="day-column" id="day-1"></div><div class="day-column" id="day-2"></div><div class="day-column" id="day-3"></div><div class="day-column" id="day-4"></div>
-    </div>
+<div id="desktop-output" class="desktop-grid" aria-hidden="true">
+  <div class="grid-header">Time</div>
+  <div class="grid-header">Mon</div><div class="grid-header">Tue</div><div class="grid-header">Wed</div><div class="grid-header">Thu</div><div class="grid-header">Fri</div>
+  <div class="time-col" id="time-column"></div>
+  <div class="day-column" id="day-0" data-day="0"></div>
+  <div class="day-column" id="day-1" data-day="1"></div>
+  <div class="day-column" id="day-2" data-day="2"></div>
+  <div class="day-column" id="day-3" data-day="3"></div>
+  <div class="day-column" id="day-4" data-day="4"></div>
+  <div id="current-time-line" class="current-time-line"></div>
+</div>
 
-    <script>
-        const API_BASE = 'https://timetable.lumivair.space';
-        const weekCache = {};
-        let currentViewDate = moment().startOf('isoWeek');
-        let lastSyncTimestamp = 0;
+<div id="popup-root"></div>
 
-        const GRID_START = 7 * 60 + 45;
-        const PX_PER_MIN = 1.3;
+<script>
+/*
+  ✅ DARKER OVERLAY: moved down 1px (offset correction)
+  ✅ DARKER OVERLAY: now behind lesson text (z-index 1, card content z-index 2)
+  ✅ All your settings preserved: CARD_GAP_PX = 25, min-height = 72, custom padding
 
-        async function fetchWeekData(year, week) {
-            const cacheKey = `${year}-${week}`;
-            if (weekCache[cacheKey]) return weekCache[cacheKey];
-            try {
-                const response = await fetch(`${API_BASE}/week/${year}/${week}`);
-                const data = await response.json();
-                weekCache[cacheKey] = data;
-                return data;
-            } catch (error) { return []; }
+  ✅ NEW: Multi‑week holidays – global holidayRanges, works across weeks
+  ✅ NEW: Block substitutions – only "Schulschluss" removes overlapping lessons on desktop
+  ✅ NEW: Mobile – block substitutions are normal entries, no full‑day takeovers
+  ✅ NEW: Room numbers, teacher acronyms, messages displayed on all cards
+  ✅ FIXED: Sync status now fetches fresh data every 60 seconds (no cache)
+  ✅ FIXED: Holiday ranges pre‑fetched for 8 weeks before & after current week
+  ✅ FIXED: Light mode – current lesson overlay uses same color as main line (no weird dark red)
+*/
+
+const API_BASE = 'https://timetable.lumivair.space';
+const weekCache = {};
+let currentViewDate = moment().startOf('isoWeek');
+let lastSyncTimestamp = 0;
+
+// ---------- GLOBAL HOLIDAY RANGES (for multi‑week support) ----------
+let holidayRanges = []; // each: { startM, endM, title, message, ...original }
+
+const DAY_START_MIN = 7*60 + 45;
+const DAY_END_MIN   = 18*60;
+const PX_PER_MIN = 1.6;
+const GRID_STEP_MINUTES = 60;
+const GRID_STEP_PX = GRID_STEP_MINUTES * PX_PER_MIN;
+const CARD_GAP_PX = 25;     // your preferred gap
+
+const firstLabelMinute = Math.ceil(DAY_START_MIN / GRID_STEP_MINUTES) * GRID_STEP_MINUTES;
+const offsetMinutes = firstLabelMinute - DAY_START_MIN;
+const offsetPx = offsetMinutes * PX_PER_MIN;
+const dayTotalHeightPx = Math.ceil((DAY_END_MIN - DAY_START_MIN) * PX_PER_MIN) + 30;
+document.documentElement.style.setProperty('--grid-step', `${GRID_STEP_PX}px`);
+document.documentElement.style.setProperty('--grid-offset', `${offsetPx}px`);
+document.documentElement.style.setProperty('--day-total-height', `${dayTotalHeightPx}px`);
+
+// ---------- URL HASH ----------
+function parseHashAndSetDate() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return false;
+  const match = hash.match(/^(\d{4})\/(\d{1,2})$/);
+  if (!match) return false;
+  const year = parseInt(match[1], 10);
+  const week = parseInt(match[2], 10);
+  if (week < 1 || week > 53) return false;
+  const m = moment().isoWeekYear(year).isoWeek(week).startOf('isoWeek');
+  if (m.isValid()) {
+    currentViewDate = m;
+    return true;
+  }
+  return false;
+}
+function updateURLHash() {
+  const year = currentViewDate.isoWeekYear();
+  const week = currentViewDate.isoWeek();
+  const hash = `#${year}/${week}`;
+  if (window.location.hash !== hash) history.pushState(null, '', hash);
+}
+// ----------
+
+function goToCurrentWeek() {
+  currentViewDate = moment().startOf('isoWeek');
+  updateURLHash();
+  renderTimetable();
+}
+
+function minutesFromMidnight(hhmmss){
+  if (!hhmmss) return NaN;
+  const [h,m] = hhmmss.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return NaN;
+  return h*60 + m;
+}
+
+// ---------- PARSE Microsoft /Date(123456)/ format ----------
+function parseMsDate(msDateStr) {
+  if (!msDateStr || typeof msDateStr !== 'string') return null;
+  const match = msDateStr.match(/\/Date\((\d+)\)\//);
+  return match ? moment(parseInt(match[1], 10)) : null;
+}
+
+// ---------- STORE HOLIDAY RANGES GLOBALLY ----------
+function storeHolidayRange(l) {
+  if (!l.timetableEntryTypeLong || !l.timetableEntryTypeLong.toLowerCase().includes('holiday')) return;
+  if (!l.start || !l.end) return;
+  const startM = parseMsDate(l.start);
+  const endM = parseMsDate(l.end);
+  if (!startM || !endM) return;
+
+  // avoid duplicates (same start, end, title)
+  const exists = holidayRanges.some(r =>
+    r.startM.isSame(startM) && r.endM.isSame(endM) && r.title === l.title
+  );
+  if (!exists) {
+    holidayRanges.push({
+      startM: startM.clone(),
+      endM: endM.clone(),
+      title: l.title,
+      message: l.message,
+      isAllDay: 1,
+      timetableEntryTypeLong: l.timetableEntryTypeLong,
+      timetableEntryType: l.timetableEntryType
+    });
+  }
+}
+
+// ---------- FETCH WEEK DATA – with cache bypass for sync status ----------
+async function fetchWeekData(year, week, noCache = false) {
+  const key = `${year}-${week}`;
+  // If we want fresh data (for sync status) or not cached, bypass cache
+  if (!noCache && weekCache[key]) return weekCache[key];
+  try{
+    const fetchOptions = noCache ? { cache: 'no-cache' } : {};
+    const r = await fetch(`${API_BASE}/week/${year}/${week}`, fetchOptions);
+    const d = await r.json();
+    // Store any holiday ranges for multi‑week support
+    d.forEach(l => storeHolidayRange(l));
+    if (!noCache) weekCache[key] = d; // only cache if not a forced refresh
+    return d;
+  }catch(e){ console.error(e); return []; }
+}
+
+// ---------- PREFETCH HOLIDAY RANGES FOR WEEKS AROUND CURRENT ----------
+async function prefetchHolidayWeeks() {
+  const baseYear = currentViewDate.isoWeekYear();
+  const baseWeek = currentViewDate.isoWeek();
+  const range = 8; // 8 weeks before & after
+  const promises = [];
+  for (let offset = -range; offset <= range; offset++) {
+    const weekM = moment().isoWeekYear(baseYear).isoWeek(baseWeek).add(offset, 'weeks');
+    const year = weekM.isoWeekYear();
+    const week = weekM.isoWeek();
+    // Only fetch if not already in cache (but we want to populate holidayRanges)
+    if (!weekCache[`${year}-${week}`]) {
+      promises.push(fetchWeekData(year, week, false).catch(e => {}));
+    }
+  }
+  await Promise.all(promises);
+  // After pre‑fetch, re‑render the current week to show newly discovered holidays
+  renderTimetable();
+}
+
+// ---------- SYNC STATUS – ALWAYS FRESH ----------
+async function updateSyncStatus(){
+  try{
+    // Force no-cache to get live server status
+    const res = await fetch(`${API_BASE}/status`, { cache: 'no-cache' });
+    const d = await res.json();
+    lastSyncTimestamp = d.last_sync_ts;
+    renderSyncTime();
+  }catch(e){}
+}
+function renderSyncTime(){
+  const el = document.getElementById('sync-timer');
+  if (!lastSyncTimestamp){ el.textContent = 'Sync: unknown'; return; }
+  const diff = moment().diff(moment.unix(lastSyncTimestamp), 'minutes');
+  el.textContent = diff < 1 ? 'Synced: Just now' : `Synced: ${diff} min ago`;
+  el.style.color = diff > 60 ? 'var(--accent-red)' : 'var(--text-sub)';
+}
+
+function isCancelled(l){
+  if (!l) return false;
+  if (l.isCancelled) return true;
+  if (l.timetableEntryTypeLong && typeof l.timetableEntryTypeLong === 'string') {
+    return l.timetableEntryTypeLong.toLowerCase().includes('cancel');
+  }
+  return false;
+}
+
+function isFullDayCandidate(l){
+  if (!l) return false;
+  if (l.isAllDay == 1) return true;
+  if (l.isFullDay === true) return true;
+  if (l.lessonStart === '00:00:00') return true;
+  if (l.timetableEntryTypeLong && typeof l.timetableEntryTypeLong === 'string'){
+    return l.timetableEntryTypeLong.toLowerCase().includes('full');
+  }
+  return false;
+}
+
+function isEvent(l){
+  if (!l) return false;
+  return l.timetableEntryType && l.timetableEntryType !== 'lesson';
+}
+
+function createCard(l){
+  const card = document.createElement('div'); card.className = 'lesson-card';
+  if (isCancelled(l)) card.classList.add('status-cancelled');
+  else if (l.timetableEntryType === 'substitution') card.classList.add('status-substitution');
+
+  const row1 = document.createElement('div'); row1.className = 'card-row1';
+  const title = document.createElement('div'); title.className = 'title';
+  title.textContent = l.title || l.course || '';
+  const timeRange = document.createElement('div'); timeRange.className = 'time-range';
+  timeRange.textContent = `${(l.lessonStart||'').slice(0,5)} - ${(l.lessonEnd||'').slice(0,5)}`;
+  row1.appendChild(title); row1.appendChild(timeRange);
+
+  const row2 = document.createElement('div'); row2.className = 'card-row2';
+  const meta = document.createElement('div'); meta.className = 'card-meta';
+  const teacher = document.createElement('span'); teacher.className = 'teacher';
+  teacher.textContent = l.teacherAcronym || '';
+  const room = document.createElement('span'); room.className = 'room';
+  room.textContent = l.roomName || '';
+  meta.appendChild(teacher); meta.appendChild(room);
+  row2.appendChild(meta);
+
+  card.appendChild(row1); card.appendChild(row2);
+  if (l.message){
+    const msg = document.createElement('div'); msg.className = 'msg';
+    msg.textContent = l.message;
+    msg.style.marginTop = '8px'; msg.style.fontSize = '0.85em'; msg.style.color = 'var(--text-sub)';
+    card.appendChild(msg);
+  }
+  card._meta = l;
+  card.addEventListener('click', (ev)=>{ ev.stopPropagation(); openPopup(card, l); });
+  return card;
+}
+
+function openPopup(domEl, lesson){
+  closePopups();
+  const popup = document.createElement('div'); popup.className='lesson-popup';
+  const closeBtn = document.createElement('button'); closeBtn.className='popup-close'; closeBtn.innerHTML='✕';
+  closeBtn.addEventListener('click', closePopups);
+  popup.appendChild(closeBtn);
+  const h = document.createElement('h4'); h.textContent = lesson.title || lesson.course || 'Lesson';
+  popup.appendChild(h);
+  const type = document.createElement('div'); type.className='line';
+  type.innerHTML = `<strong>Type:</strong> ${lesson.timetableEntryTypeLong || lesson.timetableEntryType || 'lesson'}`;
+  popup.appendChild(type);
+  const classes = document.createElement('div'); classes.className='line';
+  classes.innerHTML = `<strong>Classes:</strong> ${lesson.className || '-'}`;
+  popup.appendChild(classes);
+  const teacherFull = (lesson.teacherFullName && lesson.teacherFullName.length) ? lesson.teacherFullName.join(', ') : (lesson.teacherAcronym || '-');
+  const teacher = document.createElement('div'); teacher.className='line';
+  teacher.innerHTML = `<strong>Teacher:</strong> ${teacherFull} (${lesson.teacherAcronym || '-'})`;
+  popup.appendChild(teacher);
+  const room = document.createElement('div'); room.className='line';
+  room.innerHTML = `<strong>Room:</strong> ${lesson.roomName || '-'} ${lesson.isRoomChanged ? '<span class="flag" style="background:rgba(218,68,83,0.08);border:1px solid var(--border)">Room changed</span>' : ''}`;
+  popup.appendChild(room);
+  const when = document.createElement('div'); when.className='line';
+  when.innerHTML = `<strong>When:</strong> ${lesson.lessonDate || '-'} - ${(lesson.lessonStart||'').slice(0,5)} to ${(lesson.lessonEnd||'').slice(0,5)}`;
+  popup.appendChild(when);
+  if (lesson.message){
+    const msg = document.createElement('div'); msg.className='line'; msg.innerHTML = `<strong>Message:</strong> ${lesson.message}`;
+    popup.appendChild(msg);
+  }
+  if (isCancelled(lesson)){
+    const c = document.createElement('div'); c.className='line'; c.innerHTML = `<strong style="color:var(--accent-red)">Cancelled</strong>`;
+    popup.appendChild(c);
+  } else if (lesson.timetableEntryType === 'substitution'){
+    const s = document.createElement('div'); s.className='line'; s.innerHTML = `<strong style="color:var(--accent-orange)">Substitution</strong>`;
+    popup.appendChild(s);
+  }
+  if (lesson.course){
+    const course = document.createElement('div'); course.className='line';
+    course.innerHTML = `<strong>Course:</strong> ${lesson.course}`;
+    popup.appendChild(course);
+  }
+  document.body.appendChild(popup);
+  positionPopup(popup, domEl);
+  setTimeout(()=>{
+    document.addEventListener('click', outsideClickHandler);
+    document.addEventListener('keydown', escHandler);
+  },10);
+  function outsideClickHandler(ev){ if (!popup.contains(ev.target)) closePopups(); }
+  function escHandler(ev){ if (ev.key === 'Escape') closePopups(); }
+}
+function positionPopup(popup, el){
+  const rect = el.getBoundingClientRect();
+  const vpw = window.innerWidth;
+  const popupW = Math.min(420, Math.max(260, popup.offsetWidth || 320));
+  let left = rect.right + 12;
+  let top = Math.max(12, rect.top);
+  if (left + popupW > vpw - 12) left = rect.left - popupW - 12;
+  if (left < 12) left = 12;
+  const popupH = popup.offsetHeight || 220;
+  if (top + popupH > window.innerHeight - 12) top = Math.max(12, window.innerHeight - popupH - 12);
+  popup.style.left = left + 'px';
+  popup.style.top = top + 'px';
+}
+function closePopups(){ document.querySelectorAll('.lesson-popup').forEach(p=>p.remove()); }
+
+/* ---------- CURRENT TIME INDICATOR – with darker overlay (offset +1) ---------- */
+function updateCurrentTimeIndicator() {
+  const desktopGrid = document.getElementById('desktop-output');
+  const timeLine = document.getElementById('current-time-line');
+  if (!desktopGrid || desktopGrid.style.display !== 'grid') {
+    if (timeLine) timeLine.style.display = 'none';
+    return;
+  }
+
+  const now = moment();
+  const todayStr = now.format('YYYY-MM-DD');
+  const currentMinutes = now.hours() * 60 + now.minutes();
+
+  const weekStart = currentViewDate.clone().startOf('isoWeek');
+  const weekEnd = currentViewDate.clone().endOf('isoWeek');
+  const isCurrentWeek = now.isBetween(weekStart, weekEnd, 'day', '[]');
+
+  if (!isCurrentWeek) {
+    timeLine.style.display = 'none';
+    document.querySelectorAll('.lesson-card.status-current').forEach(c => c.classList.remove('status-current'));
+    document.querySelectorAll('.current-lesson-time-overlay').forEach(el => el.remove());
+    return;
+  }
+
+  const timeCol = document.querySelector('.time-col');
+  let lineTop = 0;
+  if (timeCol && currentMinutes >= DAY_START_MIN && currentMinutes <= DAY_END_MIN) {
+    const gridTop = timeCol.offsetTop;
+    lineTop = gridTop + offsetPx + (currentMinutes - DAY_START_MIN) * PX_PER_MIN;
+    timeLine.style.top = lineTop + 'px';
+    timeLine.style.display = 'block';
+  } else {
+    timeLine.style.display = 'none';
+  }
+
+  document.querySelectorAll('.lesson-card.status-current').forEach(c => c.classList.remove('status-current'));
+  document.querySelectorAll('.current-lesson-time-overlay').forEach(el => el.remove());
+
+  for (let i = 0; i < 5; i++) {
+    const col = document.getElementById(`day-${i}`);
+    if (!col) continue;
+    const dayDate = currentViewDate.clone().add(i, 'days').format('YYYY-MM-DD');
+    if (dayDate !== todayStr) continue;
+
+    const cards = col.querySelectorAll('.lesson-card');
+    cards.forEach(card => {
+      const lesson = card._meta;
+      if (!lesson) return;
+      const start = minutesFromMidnight(lesson.lessonStart);
+      const end = minutesFromMidnight(lesson.lessonEnd);
+      if (!isNaN(start) && !isNaN(end) && currentMinutes >= start && currentMinutes < end) {
+        card.classList.add('status-current');
+        if (timeLine.style.display === 'block') {
+          const cardRect = card.getBoundingClientRect();
+          const gridRect = desktopGrid.getBoundingClientRect();
+          const lineTopRelative = lineTop;
+          const cardTopRelative = cardRect.top - gridRect.top;
+          const lineOffsetInCard = lineTopRelative - cardTopRelative + 1;
+
+          let overlay = card.querySelector('.current-lesson-time-overlay');
+          if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'current-lesson-time-overlay';
+            card.appendChild(overlay);
+          }
+          overlay.style.top = lineOffsetInCard + 'px';
+          overlay.style.display = 'block';
         }
+      }
+    });
+  }
+}
 
-        async function updateSyncStatus() {
-            try {
-                const response = await fetch(`${API_BASE}/status`);
-                const data = await response.json();
-                lastSyncTimestamp = data.last_sync_ts;
-                renderSyncTime();
-            } catch (e) {}
+/* ---------- RENDER – with multi‑week holidays, block sub fixes, normal mobile ---------- */
+async function renderTimetable(){
+  const mobileOut = document.getElementById('mobile-output');
+  const dayCols = [0,1,2,3,4].map(i => document.getElementById(`day-${i}`));
+  const timeCol = document.getElementById('time-column');
+  const year = currentViewDate.isoWeekYear();
+  const week = currentViewDate.isoWeek();
+
+  document.getElementById('current-week-display').textContent = `Week ${week} (${currentViewDate.format('D.M')} - ${currentViewDate.clone().endOf('isoWeek').format('D.M')})`;
+
+  mobileOut.innerHTML = 'Loading...';
+  timeCol.innerHTML = '';
+  dayCols.forEach(c=>c.innerHTML='');
+
+  const lessons = await fetchWeekData(year, week);
+  mobileOut.innerHTML = '';
+
+  const days = [];
+  for (let i=0;i<5;i++) days.push(currentViewDate.clone().add(i,'days').format('YYYY-MM-DD'));
+
+  // ---------- MOBILE – NO SPECIAL BLOCK SUB HANDLING (all normal) ----------
+  days.forEach(date => {
+    // start with lessons from API
+    let dayLessons = lessons.filter(l => l.lessonDate === date)
+                             .slice().sort((a,b) => (a.lessonStart||'').localeCompare(b.lessonStart||''));
+
+    // ---- ADD HOLIDAYS FROM GLOBAL RANGES ----
+    holidayRanges.forEach(hr => {
+      const dayM = moment(date);
+      if (dayM.isBetween(hr.startM, hr.endM, 'day', '[]')) {
+        const holidayEntry = {
+          title: hr.title,
+          message: hr.message,
+          lessonDate: date,
+          lessonStart: '00:00:00',
+          lessonEnd: '23:59:59',
+          isAllDay: 1,
+          timetableEntryTypeLong: hr.timetableEntryTypeLong,
+          timetableEntryType: hr.timetableEntryType
+        };
+        const exists = dayLessons.some(l => l.lessonStart === '00:00:00' && l.title === hr.title);
+        if (!exists) {
+          dayLessons.push(holidayEntry);
         }
+      }
+    });
+    dayLessons.sort((a,b) => (a.lessonStart||'').localeCompare(b.lessonStart||''));
 
-        function renderSyncTime() {
-            const el = document.getElementById('sync-timer');
-            if (!lastSyncTimestamp) return;
-            const diff = moment().diff(moment.unix(lastSyncTimestamp), 'minutes');
-            el.textContent = diff < 1 ? "Synced: Just now" : `Synced: ${diff} min ago`;
-            el.style.color = diff > 60 ? 'var(--accent-red)' : 'var(--text-sub)';
+    const group = document.createElement('div'); group.className = 'day-group';
+    const titleDiv = document.createElement('div'); titleDiv.className = 'day-title';
+    titleDiv.textContent = moment(date).format('dddd, D. MMMM');
+    group.appendChild(titleDiv);
+
+    const fullDayEntry = dayLessons.find(l => isFullDayCandidate(l));
+    if (fullDayEntry) {
+      const entry = document.createElement('div'); entry.className = 'mobile-entry';
+      entry.style.borderLeftColor = 'var(--accent-green)';
+      const timeDiv = document.createElement('div'); timeDiv.className = 'm-time';
+      timeDiv.textContent = 'DAY';
+      const contentDiv = document.createElement('div'); contentDiv.className = 'm-content';
+      contentDiv.innerHTML = `<span class="title"><b>${fullDayEntry.title || 'Full day'}</b></span>` +
+                             (fullDayEntry.message ? `<br><span class="msg" style="color:var(--accent-green)">${fullDayEntry.message}</span>` : '');
+      entry.appendChild(timeDiv); entry.appendChild(contentDiv);
+      group.appendChild(entry);
+    } else {
+      dayLessons.forEach(l => {
+        const cancelled = isCancelled(l);
+        const isSub = l.timetableEntryType === 'substitution';
+        const borderColor = cancelled ? 'var(--accent-red)' : (isSub ? 'var(--accent-orange)' : 'var(--accent-blue)');
+
+        const entry = document.createElement('div'); entry.className = 'mobile-entry';
+        entry.style.borderLeftColor = borderColor;
+
+        const timeDiv = document.createElement('div'); timeDiv.className = 'm-time';
+        timeDiv.innerHTML = `${(l.lessonStart||'').slice(0,5)}<br>${(l.lessonEnd||'').slice(0,5)}`;
+
+        const contentDiv = document.createElement('div'); contentDiv.className = 'm-content';
+        let titleHtml = `<span class="title"><b>${l.title || l.course || ''}</b></span>`;
+        if (cancelled) titleHtml = `<span class="title" style="text-decoration:line-through"><b>${l.title || ''}</b></span>`;
+        let teacherRoom = '';
+        if (l.teacherAcronym || l.roomName) {
+          teacherRoom = `<br><small>${l.teacherAcronym || ''}${l.teacherAcronym && l.roomName ? ' · ' : ''}${l.roomName || ''}</small>`;
         }
-
-        async function renderTimetable() {
-            const mobileOut = document.getElementById('mobile-output');
-            const dayCols = [0,1,2,3,4].map(i => document.getElementById(`day-${i}`));
-            const year = currentViewDate.isoWeekYear();
-            const week = currentViewDate.isoWeek();
-
-            document.getElementById('current-week-display').textContent = `Week ${week} (${currentViewDate.format('D.M')} - ${currentViewDate.clone().endOf('isoWeek').format('D.M')})`;
-
-            mobileOut.innerHTML = 'Loading...';
-            dayCols.forEach(c => c.innerHTML = '');
-
-            const lessons = await fetchWeekData(year, week);
-            mobileOut.innerHTML = '';
-
-            const days = [];
-            for(let i=0; i<5; i++) days.push(currentViewDate.clone().add(i, 'days').format('YYYY-MM-DD'));
-
-            days.forEach((date, idx) => {
-                const dayLessons = lessons.filter(l => l.lessonDate === date);
-                const blocker = dayLessons.find(l => l.isFullDay || l.timetableEntryTypeLong === 'block substitution' || l.lessonStart === "00:00:00");
-
-                // Mobile
-                const group = document.createElement('div');
-                group.className = 'day-group';
-                group.innerHTML = `<div class="day-title">${moment(date).format('dddd, D. MMMM')}</div>`;
-
-                if (blocker) {
-                    group.innerHTML += `
-                        <div class="mobile-entry" style="border-left-color: var(--accent-green)">
-                            <div class="m-time">DAY</div>
-                            <div class="m-content"><b>${blocker.title}</b><br>${blocker.message || ''}</div>
-                        </div>`;
-                } else {
-                    dayLessons.forEach(l => {
-                        const isCancel = l.isCancelled || l.timetableEntryTypeLong?.includes('cancel');
-                        const isSub = l.timetableEntryType === 'substitution';
-                        const border = isCancel ? 'var(--accent-red)' : (isSub ? 'var(--accent-orange)' : 'var(--accent-blue)');
-                        group.innerHTML += `
-                            <div class="mobile-entry" style="border-left-color: ${border}">
-                                <div class="m-time">${l.lessonStart.slice(0,5)}<br>${l.lessonEnd.slice(0,5)}</div>
-                                <div class="m-content">
-                                    <span class="title" style="${isCancel ? 'text-decoration:line-through' : ''}"><b>${l.title}</b></span>
-                                    <br><small>${l.teacherAcronym} | ${l.roomName}</small>
-                                    ${l.message ? `<br><span class="msg" style="color:${border}">${l.message}</span>` : ''}
-                                </div>
-                            </div>`;
-                    });
-                }
-                mobileOut.appendChild(group);
-
-                // Desktop
-                const col = dayCols[idx];
-                if (blocker) {
-                    col.innerHTML = `<div class="status-event"><b>${blocker.title}</b><p>${blocker.message || ''}</p></div>`;
-                } else {
-                    dayLessons.forEach(l => {
-                        const start = moment(l.lessonStart, "HH:mm:ss").diff(moment(l.lessonStart, "HH:mm:ss").startOf('day'), 'minutes');
-                        const end = moment(l.lessonEnd, "HH:mm:ss").diff(moment(l.lessonEnd, "HH:mm:ss").startOf('day'), 'minutes');
-                        const card = document.createElement('div');
-                        card.className = 'lesson-card';
-                        if (l.isCancelled || l.timetableEntryTypeLong?.includes('cancel')) card.classList.add('status-cancelled');
-                        else if (l.timetableEntryType === 'substitution') card.classList.add('status-substitution');
-
-                        card.style.top = `${(start - GRID_START) * PX_PER_MIN}px`;
-                        card.style.height = `${(end - start) * PX_PER_MIN}px`;
-                        card.innerHTML = `<b>${l.title}</b><br>${l.teacherAcronym} <span class="${l.isRoomChanged ? 'room-changed' : ''}">${l.roomName}</span>`;
-                        if (l.message) card.innerHTML += `<span class="msg">${l.message}</span>`;
-                        col.appendChild(card);
-                    });
-                }
-            });
+        let msgHtml = '';
+        if (l.message) {
+          msgHtml = `<br><span class="msg" style="color:${borderColor}">${l.message}</span>`;
         }
+        contentDiv.innerHTML = titleHtml + teacherRoom + msgHtml;
 
-        window.changeWeek = delta => { currentViewDate.add(delta, 'weeks'); renderTimetable(); };
-        updateSyncStatus();
-        renderTimetable();
-        setInterval(renderSyncTime, 60000);
-        setInterval(updateSyncStatus, 300000);
-    </script>
+        entry.appendChild(timeDiv);
+        entry.appendChild(contentDiv);
+        entry.addEventListener('click', ()=>openPopup(entry, l));
+        group.appendChild(entry);
+      });
+    }
+    mobileOut.appendChild(group);
+  });
+
+  // ---------- DESKTOP – with full‑day, block substitution (only Schulschluss), normal lessons ----------
+  timeCol.style.paddingTop = `${offsetPx}px`;
+  timeCol.style.paddingBottom = '30px';
+  for (let t = firstLabelMinute; t <= DAY_END_MIN; t += GRID_STEP_MINUTES){
+    const hh = String(Math.floor(t/60)).padStart(2,'0'), mm = String(t%60).padStart(2,'0');
+    const el = document.createElement('div'); el.className = 'time-label';
+    el.textContent = `${hh}:${mm}`;
+    timeCol.appendChild(el);
+  }
+
+  days.forEach((date, idx)=>{
+    const col = dayCols[idx];
+    col.innerHTML = '';
+    let dayLessons = lessons.filter(l => l.lessonDate === date).slice().sort((a,b) => (a.lessonStart||'').localeCompare(b.lessonStart||''));
+
+    // ---- ADD HOLIDAYS FROM GLOBAL RANGES ----
+    holidayRanges.forEach(hr => {
+      const dayM = moment(date);
+      if (dayM.isBetween(hr.startM, hr.endM, 'day', '[]')) {
+        const holidayEntry = {
+          title: hr.title,
+          message: hr.message,
+          lessonDate: date,
+          lessonStart: '00:00:00',
+          lessonEnd: '23:59:59',
+          isAllDay: 1,
+          timetableEntryTypeLong: hr.timetableEntryTypeLong,
+          timetableEntryType: hr.timetableEntryType
+        };
+        const exists = dayLessons.some(l => l.lessonStart === '00:00:00' && l.title === hr.title);
+        if (!exists) {
+          dayLessons.push(holidayEntry);
+        }
+      }
+    });
+    dayLessons.sort((a,b) => (a.lessonStart||'').localeCompare(b.lessonStart||''));
+
+    if (dayLessons.length === 0) return;
+
+    const schulschluss = dayLessons.find(l =>
+      l.timetableEntryTypeLong === 'block substitution' &&
+      l.title && l.title.includes('Schulschluss') &&
+      l.lessonStart && l.lessonEnd
+    );
+
+    if (schulschluss) {
+      const s = minutesFromMidnight(schulschluss.lessonStart);
+      const e = minutesFromMidnight(schulschluss.lessonEnd);
+      if (!isNaN(s) && !isNaN(e)) {
+        const ds = Math.max(s, DAY_START_MIN);
+        const de = Math.min(e, DAY_END_MIN);
+        if (de > ds) {
+          const topPx = (ds - DAY_START_MIN) * PX_PER_MIN + CARD_GAP_PX;
+          const heightPx = Math.max(36, (de - ds) * PX_PER_MIN - CARD_GAP_PX);
+          const overlay = document.createElement('div'); overlay.className = 'overlay-event';
+          overlay.style.top = topPx + 'px';
+          overlay.style.height = heightPx + 'px';
+          overlay.innerHTML = `<strong>${schulschluss.title || 'Block substitution'}</strong>` +
+                              (schulschluss.message ? `<div style="margin-top:6px;color:var(--text-sub)">${schulschluss.message}</div>` : '');
+          col.appendChild(overlay);
+        }
+        dayLessons = dayLessons.filter(l => {
+          if (l === schulschluss) return false;
+          const start = minutesFromMidnight(l.lessonStart);
+          const end = minutesFromMidnight(l.lessonEnd);
+          if (isNaN(start) || isNaN(end)) return true;
+          const overlap = !(end <= s || start >= e);
+          return !overlap;
+        });
+      }
+    }
+
+    const fullCandidates = dayLessons.filter(isFullDayCandidate);
+    if (fullCandidates.length > 0){
+      let spanStart = DAY_START_MIN;
+      let spanEnd = DAY_END_MIN;
+
+      const overlay = document.createElement('div'); overlay.className = 'overlay-event';
+      const topPx = (spanStart - DAY_START_MIN) * PX_PER_MIN + CARD_GAP_PX;
+      const heightPx = Math.max(36, (spanEnd - spanStart) * PX_PER_MIN - CARD_GAP_PX);
+      overlay.style.top = topPx + 'px';
+      overlay.style.height = heightPx + 'px';
+      const titles = fullCandidates.map(f => f.title || '').filter(Boolean).join(' / ');
+      overlay.innerHTML = `<strong>${titles || 'Full day'}</strong><div style="margin-top:6px;color:var(--text-sub)">${(fullCandidates[0] && fullCandidates[0].message) ? fullCandidates[0].message : ''}</div>`;
+      col.appendChild(overlay);
+
+      dayLessons = [];
+    } else {
+      const cancelled = dayLessons.filter(isCancelled);
+      const events = dayLessons.filter(l => isEvent(l) && !isFullDayCandidate(l) &&
+                                        !(l.timetableEntryTypeLong === 'block substitution' && l.title && l.title.includes('Schulschluss')));
+      events.forEach(ev=>{
+        if (!ev.lessonStart) return;
+        const evStart = minutesFromMidnight(ev.lessonStart);
+        const coveredCancelled = dayLessons.filter(l => isCancelled(l) && minutesFromMidnight(l.lessonStart) >= evStart);
+        if (coveredCancelled.length === 0) return;
+        const starts = coveredCancelled.map(l => minutesFromMidnight(l.lessonStart)).filter(n => !Number.isNaN(n));
+        const ends = coveredCancelled.map(l => minutesFromMidnight(l.lessonEnd)).filter(n => !Number.isNaN(n));
+        if (!starts.length || !ends.length) return;
+        let spanStart = Math.min(evStart, Math.min(...starts));
+        let spanEnd = Math.max(...ends);
+        spanStart = Math.max(DAY_START_MIN, spanStart);
+        spanEnd = Math.min(DAY_END_MIN, spanEnd);
+
+        const overlay = document.createElement('div'); overlay.className = 'overlay-event';
+        const topPx = (spanStart - DAY_START_MIN) * PX_PER_MIN + CARD_GAP_PX;
+        const heightPx = Math.max(36, (spanEnd - spanStart) * PX_PER_MIN - CARD_GAP_PX);
+        overlay.style.top = topPx + 'px';
+        overlay.style.height = heightPx + 'px';
+        overlay.innerHTML = `<strong>${ev.title || 'Event'}</strong><div style="margin-top:6px;color:var(--text-sub)">${ev.message || ''}</div>`;
+        col.appendChild(overlay);
+
+        const coveredIds = new Set(coveredCancelled);
+        dayLessons = dayLessons.filter(l => !coveredIds.has(l));
+      });
+
+      dayLessons.forEach(l=>{
+        const s = minutesFromMidnight(l.lessonStart), e = minutesFromMidnight(l.lessonEnd);
+        if (Number.isNaN(s) || Number.isNaN(e)){
+          const card = createCard(l);
+          card.style.top = CARD_GAP_PX + 'px';
+          card.style.height = '80px';
+          col.appendChild(card);
+          return;
+        }
+        let ds = Math.max(s, DAY_START_MIN);
+        let de = Math.min(e, DAY_END_MIN);
+        if (de <= ds) return;
+
+        const topPx = (ds - DAY_START_MIN) * PX_PER_MIN + CARD_GAP_PX;
+        const heightPx = Math.max(72, (de - ds) * PX_PER_MIN - CARD_GAP_PX);
+        const card = createCard(l);
+        card.style.top = topPx + 'px';
+        card.style.height = heightPx + 'px';
+        col.appendChild(card);
+      });
+    }
+  });
+
+  const desktop = document.getElementById('desktop-output');
+  const mobile = document.getElementById('mobile-output');
+  if (window.innerWidth >= 800){
+    desktop.style.display = 'grid';
+    mobile.style.display = 'none';
+    desktop.setAttribute('aria-hidden', 'false');
+  } else {
+    desktop.style.display = 'none';
+    mobile.style.display = 'block';
+    desktop.setAttribute('aria-hidden', 'true');
+  }
+
+  updateCurrentTimeIndicator();
+}
+
+function changeWeek(delta){
+  currentViewDate.add(delta, 'weeks');
+  updateURLHash();
+  renderTimetable();
+}
+
+// --- INIT ---
+(async function initialize() {
+  parseHashAndSetDate();
+  updateURLHash();
+  window.addEventListener('hashchange', () => {
+    if (parseHashAndSetDate()) renderTimetable();
+  });
+
+  // Start sync status updates – every 60 seconds, fresh from server
+  updateSyncStatus();
+  setInterval(updateSyncStatus, 60000); // now every minute
+  setInterval(() => { updateCurrentTimeIndicator(); }, 60000);
+
+  // Pre‑fetch holiday weeks – this will populate holidayRanges before first render
+  await prefetchHolidayWeeks(); // also triggers renderTimetable()
+
+  // Initial render if not already done by prefetch
+  if (!weekCache[`${currentViewDate.isoWeekYear()}-${currentViewDate.isoWeek()}`]) {
+    renderTimetable();
+  }
+})();
+
+window.addEventListener('resize', ()=>{ clearTimeout(window._rt); window._rt = setTimeout(()=>{ renderTimetable(); },140); });
+document.body.addEventListener('click', ()=>{ closePopups(); });
+
+</script>
 </body>
 </html>
