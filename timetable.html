@@ -398,6 +398,12 @@ body{
 <div id="popup-root"></div>
 
 <script>
+/*
+  ✅ SYNC STATUS – now updates every second with exact seconds/minutes/hours
+  ✅ 0‑9s: "Just now" | 10‑59s: "X s ago" | 60‑3599s: "X m ago" | ≥3600s: "X h ago"
+  ✅ Server fetch still every 60 seconds – display updates every second
+  ✅ All your custom settings preserved – gaps, heights, red line offset, holidays, block subs
+*/
 
 const API_BASE = 'https://timetable.lumivair.space';
 const weekCache = {};
@@ -527,22 +533,39 @@ async function prefetchHolidayWeeks() {
   renderTimetable();
 }
 
-// ---------- SYNC STATUS – ALWAYS FRESH ----------
+// ---------- SYNC STATUS – ALWAYS FRESH (fetch every 60s) ----------
 async function updateSyncStatus(){
   try{
-    // Force no-cache to get live server status
     const res = await fetch(`${API_BASE}/status`, { cache: 'no-cache' });
     const d = await res.json();
     lastSyncTimestamp = d.last_sync_ts;
-    renderSyncTime();
+    renderSyncTime(); // immediately show fresh status
   }catch(e){}
 }
+
+// ---------- RENDER SYNC TIME – with seconds granularity ----------
 function renderSyncTime(){
   const el = document.getElementById('sync-timer');
-  if (!lastSyncTimestamp){ el.textContent = 'Sync: unknown'; return; }
-  const diff = moment().diff(moment.unix(lastSyncTimestamp), 'minutes');
-  el.textContent = diff < 1 ? 'Synced: Just now' : `Synced: ${diff} min ago`;
-  el.style.color = diff > 60 ? 'var(--accent-red)' : 'var(--text-sub)';
+  if (!lastSyncTimestamp){
+    el.textContent = 'Sync: unknown';
+    return;
+  }
+  const diffSeconds = moment().diff(moment.unix(lastSyncTimestamp), 'seconds');
+
+  let text = '';
+  if (diffSeconds < 10) {
+    text = 'Synced: Just now';
+  } else if (diffSeconds < 60) {
+    text = `Synced: ${diffSeconds} s ago`;
+  } else if (diffSeconds < 3600) {
+    const minutes = Math.floor(diffSeconds / 60);
+    text = `Synced: ${minutes} m ago`;
+  } else {
+    const hours = Math.floor(diffSeconds / 3600);
+    text = `Synced: ${hours} h ago`;
+  }
+  el.textContent = text;
+  el.style.color = diffSeconds > 3600 ? 'var(--accent-red)' : 'var(--text-sub)';
 }
 
 function isCancelled(l){
@@ -1006,12 +1029,17 @@ function changeWeek(delta){
     if (parseHashAndSetDate()) renderTimetable();
   });
 
-  // Start sync status updates – every 60 seconds, fresh from server
+  // Start sync status – fetch fresh data every 60 seconds
   updateSyncStatus();
-  setInterval(updateSyncStatus, 60000); // now every minute
+  setInterval(updateSyncStatus, 60000);
+
+  // Update the displayed elapsed time every second (seconds count)
+  setInterval(() => { renderSyncTime(); }, 1000);
+
+  // Update red line every minute
   setInterval(() => { updateCurrentTimeIndicator(); }, 60000);
 
-  // Pre‑fetch holiday weeks – this will populate holidayRanges before first render
+  // Pre‑fetch holiday weeks – populate holidayRanges before first render
   await prefetchHolidayWeeks(); // also triggers renderTimetable()
 
   // Initial render if not already done by prefetch
