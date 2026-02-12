@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Timetable – multi‑week holidays, live sync, room info</title>
+<title>Timetable</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 <style>
 :root{
@@ -365,14 +365,14 @@ body{
 <body>
 
 <div class="header-container">
-  <h1>🗓️ Timetable</h1>
+  <h1>Timetable</h1>
   <div class="sync-status" id="sync-timer">Checking sync status...</div>
 </div>
 
 <div class="navigation">
   <div class="nav-left">
     <button onclick="changeWeek(-1)">← Prev</button>
-    <button onclick="goToCurrentWeek()">🏠 Home</button>
+    <button onclick="goToCurrentWeek()">Home</button>
     <button onclick="changeWeek(1)">Next →</button>
   </div>
   <div class="nav-center">
@@ -398,19 +398,6 @@ body{
 <div id="popup-root"></div>
 
 <script>
-/*
-  ✅ DARKER OVERLAY: moved down 1px (offset correction)
-  ✅ DARKER OVERLAY: now behind lesson text (z-index 1, card content z-index 2)
-  ✅ All your settings preserved: CARD_GAP_PX = 25, min-height = 72, custom padding
-
-  ✅ NEW: Multi‑week holidays – global holidayRanges, works across weeks
-  ✅ NEW: Block substitutions – only "Schulschluss" removes overlapping lessons on desktop
-  ✅ NEW: Mobile – block substitutions are normal entries, no full‑day takeovers
-  ✅ NEW: Room numbers, teacher acronyms, messages displayed on all cards
-  ✅ FIXED: Sync status now fetches fresh data every 60 seconds (no cache)
-  ✅ FIXED: Holiday ranges pre‑fetched for 8 weeks before & after current week
-  ✅ FIXED: Light mode – current lesson overlay uses same color as main line (no weird dark red)
-*/
 
 const API_BASE = 'https://timetable.lumivair.space';
 const weekCache = {};
